@@ -1,6 +1,6 @@
 import Link from "next/link";
 
-import { ScrollSentinel } from "./scroll-sentinel";
+import { ScrollSentinel } from "./ScrollSentinel";
 
 /**
  * SiteHeader — sticky top bar with monospace wordmark and minimal primary nav.

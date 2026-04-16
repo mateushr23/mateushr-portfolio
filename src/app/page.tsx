@@ -1,8 +1,8 @@
-import { Hero } from "@/components/hero";
-import { PaperGrain } from "@/components/paper-grain";
-import { ProjectIndex } from "@/components/project-index";
-import { SiteFooter } from "@/components/site-footer";
-import { SiteHeader } from "@/components/site-header";
+import { Hero } from "@/components/Hero";
+import { PaperGrain } from "@/components/PaperGrain";
+import { ProjectIndex } from "@/components/ProjectIndex";
+import { SiteFooter } from "@/components/SiteFooter";
+import { SiteHeader } from "@/components/SiteHeader";
 import { createClient } from "@/lib/supabase/server";
 import type { Database } from "@/types/database";
 

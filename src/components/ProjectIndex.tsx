@@ -1,6 +1,6 @@
 import type { Database } from "@/types/database";
 
-import { IndexRow } from "./index-row";
+import { IndexRow } from "./IndexRow";
 
 type Repo = Database["public"]["Tables"]["repos"]["Row"];
 
