@@ -1,0 +1,31 @@
+{
+  "stage": "supabase-data-layer",
+  "files_created": [
+    "supabase/migrations/20260416120000_init_repos.sql",
+    "src/lib/supabase/client.ts",
+    "src/lib/supabase/server.ts",
+    "src/lib/supabase/admin.ts",
+    "src/types/database.ts",
+    "src/proxy.ts",
+    "handoffs/stage-1-supabase.json"
+  ],
+  "files_modified": [],
+  "tables": ["public.repos"],
+  "rls_enabled": true,
+  "policies": ["repos_public_read", "repos_admin_read_all", "repos_admin_write"],
+  "indexes": ["repos_pkey", "repos_github_id_key", "idx_repos_visible", "idx_repos_featured"],
+  "triggers": ["repos_set_updated_at"],
+  "env_vars_required": [
+    "NEXT_PUBLIC_SUPABASE_URL",
+    "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY",
+    "SUPABASE_SERVICE_ROLE_KEY"
+  ],
+  "user_action_required": [
+    "Create Supabase project at supabase.com",
+    "supabase link --project-ref <ref>",
+    "supabase db push to apply migration",
+    "Paste URL + keys into .env.local",
+    "Regenerate types: npx supabase gen types typescript --linked > src/types/database.ts"
+  ],
+  "next_stage": "Claude Code Routine (daily sync) — Stage 2"
+}
