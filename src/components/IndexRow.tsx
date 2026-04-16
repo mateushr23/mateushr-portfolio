@@ -1,4 +1,5 @@
 import type { Database } from "@/types/database";
+import { safeRepoHref } from "@/lib/safe-url";
 
 type Repo = Database["public"]["Tables"]["repos"]["Row"];
 
@@ -36,6 +37,12 @@ export function IndexRow({ repo, index }: IndexRowProps) {
   const description = repo.description_ai ?? EMPTY_DESCRIPTION;
   const language = repo.language ?? "TypeScript";
   const pushedAtLabel = formatPushedAt(repo.pushed_at);
+  // safeRepoHref only returns http(s) URLs that parse cleanly. When the DB
+  // row has something unexpected (null, javascript:, malformed) the link
+  // falls back to "#" and is marked aria-disabled so it's still readable
+  // but not interactive.
+  const safeHrefValue = safeRepoHref(repo.url);
+  const hasSafeHref = safeHrefValue !== undefined;
 
   return (
     <li
@@ -43,9 +50,10 @@ export function IndexRow({ repo, index }: IndexRowProps) {
       style={{ "--reveal-i": 5 + index } as React.CSSProperties}
     >
       <a
-        href={repo.url}
-        target="_blank"
-        rel="noopener noreferrer"
+        href={hasSafeHref ? safeHrefValue : "#"}
+        {...(hasSafeHref
+          ? { target: "_blank", rel: "noopener noreferrer" }
+          : { "aria-disabled": true, tabIndex: -1 })}
         className="index-row grid min-h-24 grid-cols-1 items-baseline gap-4 py-8 md:grid-cols-[64px_1fr_48px] md:gap-8"
       >
         <span aria-hidden="true" className="index-num font-display text-[2.25rem] leading-none">

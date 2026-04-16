@@ -9,7 +9,7 @@ export function SiteFooter() {
   return (
     <footer
       role="contentinfo"
-      className="mx-auto max-w-[1100px] border-t border-border px-5 py-12 md:px-12"
+      className="mx-auto max-w-container border-t border-border px-5 py-12 md:px-12"
     >
       <div className="grid grid-cols-1 gap-6 md:grid-cols-[1fr_auto] md:items-end md:gap-8">
         <div className="flex flex-col gap-4">

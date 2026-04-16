@@ -18,7 +18,7 @@ export function SiteHeader() {
         data-scrolled="false"
         className="site-header sticky top-0 z-40 border-b border-transparent"
       >
-        <div className="mx-auto flex h-16 max-w-[1100px] items-center justify-between px-5 md:px-12">
+        <div className="mx-auto flex h-16 max-w-container items-center justify-between px-5 md:px-12">
           <Link
             href="/"
             aria-label="mateushr — home"

@@ -20,7 +20,7 @@ export function ProjectIndex({ repos }: ProjectIndexProps) {
     <section
       id="projetos"
       aria-labelledby="projetos-label"
-      className="mx-auto max-w-[1100px] px-5 py-24 md:px-12 md:py-40"
+      className="mx-auto max-w-container px-5 py-24 md:px-12 md:py-40"
     >
       <p
         id="projetos-label"

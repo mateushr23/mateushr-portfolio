@@ -13,7 +13,7 @@ export function Hero() {
     <section
       id="home"
       aria-labelledby="hero-title"
-      className="mx-auto flex min-h-[calc(100dvh-64px)] max-w-[1100px] flex-col items-start justify-center gap-6 px-5 md:px-12"
+      className="mx-auto flex min-h-[calc(100dvh-64px)] max-w-container flex-col items-start justify-center gap-6 px-5 md:px-12"
     >
       <p className="eyebrow reveal" style={{ "--reveal-i": 0 } as React.CSSProperties}>
         DESENVOLVEDOR · SÃO PAULO · ABRIL 2026
@@ -21,6 +21,10 @@ export function Hero() {
 
       <h1
         id="hero-title"
+        // xl:-ml-1.5 = -6px optical correction at xl+ only. Fraunces display
+        // at --text-display-xl has a visible left sidebearing on capital
+        // "D" that makes the headline look inset from the eyebrow/paragraph
+        // below it. Removing this class reintroduces the misalignment.
         className="reveal font-display text-display-xl leading-[0.95] tracking-[-0.035em] text-text xl:-ml-1.5"
         style={{ "--reveal-i": 1 } as React.CSSProperties}
       >
