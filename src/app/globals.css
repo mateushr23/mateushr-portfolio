@@ -1,8 +1,210 @@
 @import "tailwindcss";
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+@theme {
+  /* Colors — editorial dark, warm off-black with amber accent */
+  --color-primary: #0b0b0c;
+  --color-surface: #121214;
+  --color-surface-elevated: #17171a;
+  --color-text: #edeae3;
+  --color-text-muted: #8a857a;
+  --color-text-dim: #53504a;
+  --color-accent: #e8a44c;
+  --color-accent-muted: #a87534;
+  --color-border: #26252a;
+  --color-border-strong: #36343b;
+
+  /* Fonts — bound to next/font CSS variables set on <html> */
+  --font-display: var(--font-fraunces);
+  --font-sans: var(--font-geist);
+  --font-mono: var(--font-jetbrains-mono);
+
+  /*
+   * Type scale.
+   * NOTE: --text-display-xl intentionally tightened from the handoff's
+   * max of 7.5rem to 6rem. The user shortened the headline copy to two
+   * lines — "Da ideia ao usuário." (line 1) vs "Engenharia com visão de
+   * produto." (line 2). At 7.5rem the word "usuário" hangs alone in empty
+   * space on large viewports, creating an awkward stair-step. 6rem keeps
+   * the hero commanding at 1440px while preventing orphaned tokens on
+   * line 1. The fluid floor (3.5rem) and slope (8vw + 1rem) are preserved.
+   * Chose 6rem over 5.5rem because the visible length ratio between line 1
+   * and line 2 is character-driven, not size-driven — shrinking further
+   * only makes the hero feel less confident without fixing the stair-step.
+   */
+  --text-display-xl: clamp(3.5rem, 8vw + 1rem, 6rem);
+  --text-display: clamp(2.5rem, 5vw + 1rem, 5rem);
+  --text-h1: clamp(2rem, 3vw + 1rem, 3.25rem);
+  --text-h2: clamp(1.5rem, 2vw + 0.75rem, 2.25rem);
+
+  /* Container */
+  --spacing-container: 1100px;
+
+  /* Easing */
+  --ease-out-expo: cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+/* Base layer */
+@layer base {
+  html {
+    color-scheme: dark;
+    scroll-behavior: smooth;
+  }
+
+  body {
+    background: var(--color-primary);
+    color: var(--color-text);
+    font-family: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
+    font-feature-settings: "ss01", "cv11";
+    -webkit-font-smoothing: antialiased;
+  }
+
+  ::selection {
+    background: rgba(232, 164, 76, 0.25);
+    color: var(--color-text);
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 3px;
+    border-radius: 4px;
+  }
+
+  [id] {
+    scroll-margin-top: 80px;
+  }
+
+  h1,
+  h2,
+  h3 {
+    font-family: var(--font-display), ui-serif, Georgia, serif;
+    letter-spacing: -0.035em;
+    line-height: 0.95;
+    font-variation-settings: "opsz" 144;
+  }
+
+  em {
+    font-style: italic;
+    font-variation-settings: "opsz" 144;
+  }
+
+  /*
+   * WONK swash — reserved for the single signature word "produto" in the
+   * hero headline (see handoffs/stage-3-home-design.json:
+   * typography.scale_rules.hanging_italic_swash & copy.hero_headline_wonky_word).
+   * Applied via <em class="wonk">produto</em>. All other <em> get italic
+   * + opsz only, keeping WONK as a deliberate, singular tonal hit.
+   */
+  em.wonk,
+  .wonk {
+    font-variation-settings:
+      "opsz" 144,
+      "WONK" 1;
+  }
+
+  .eyebrow {
+    font-family: var(--font-mono), ui-monospace, monospace;
+    font-size: 0.8125rem;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--color-text-muted);
+  }
+}
+
+/* Skip link — hidden until focused */
+.skip-link {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  padding: 8px 12px;
+  background: var(--color-surface-elevated);
+  color: var(--color-text);
+  font-family: var(--font-mono), ui-monospace, monospace;
+  font-size: 0.8125rem;
+  border-radius: 4px;
+  transform: translateY(-200%);
+  transition: transform 220ms var(--ease-out-expo);
+  z-index: 100;
+}
+.skip-link:focus-visible {
+  transform: translateY(0);
+}
+
+/* Staggered reveal — pure CSS, no JS */
+@keyframes reveal-up {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.reveal {
+  animation: reveal-up 420ms var(--ease-out-expo) both;
+  animation-delay: calc(var(--reveal-i, 0) * 80ms);
+}
+
+/* Index row hover underline — amber line grows left-to-right */
+.name-link {
+  background-image: linear-gradient(var(--color-accent), var(--color-accent));
+  background-size: 0% 1px;
+  background-repeat: no-repeat;
+  background-position: 0 100%;
+  transition: background-size 220ms var(--ease-out-expo);
+}
+.index-row:hover .name-link,
+.index-row:focus-visible .name-link {
+  background-size: 100% 1px;
+}
+
+/* Index row arrow glyph — slides right on hover */
+.index-arrow {
+  display: inline-block;
+  transition: transform 220ms var(--ease-out-expo);
+}
+.index-row:hover .index-arrow,
+.index-row:focus-visible .index-arrow {
+  transform: translateX(4px);
+}
+
+/* Index row number — shifts to accent on hover */
+.index-num {
+  color: var(--color-text-dim);
+  transition: color 220ms var(--ease-out-expo);
+}
+.index-row:hover .index-num,
+.index-row:focus-visible .index-num {
+  color: var(--color-accent);
+}
+
+/* Header — backdrop blur and border appear only when scrolled past the sentinel */
+.site-header {
+  transition:
+    background-color 220ms var(--ease-out-expo),
+    border-color 220ms var(--ease-out-expo),
+    backdrop-filter 220ms var(--ease-out-expo);
+}
+.site-header[data-scrolled="true"] {
+  background-color: rgba(11, 11, 12, 0.72);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-bottom-color: var(--color-border);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+  .name-link {
+    transition: none;
+  }
+  .index-arrow {
+    transition: none;
+  }
 }
