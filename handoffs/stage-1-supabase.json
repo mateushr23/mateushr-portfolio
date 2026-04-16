@@ -17,7 +17,7 @@
   "triggers": ["repos_set_updated_at"],
   "env_vars_required": [
     "NEXT_PUBLIC_SUPABASE_URL",
-    "NEXT_PUBLIC_SUPABASE_ANON_KEY",
+    "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY",
     "SUPABASE_SERVICE_ROLE_KEY"
   ],
   "user_action_required": [

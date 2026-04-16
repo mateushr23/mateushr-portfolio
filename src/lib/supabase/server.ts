@@ -5,7 +5,7 @@ import type { Database } from "@/types/database";
 
 /**
  * Server-side Supabase client for Server Components, Server Actions, and
- * Route Handlers. Uses the anon key scoped by the user's auth cookie, so
+ * Route Handlers. Uses the publishable key scoped by the user's auth cookie, so
  * RLS policies are enforced.
  *
  * Next.js 15+ (including 16) exposes `cookies()` as an async API, hence the
@@ -18,7 +18,7 @@ export async function createClient(): Promise<ReturnType<typeof createServerClie
 
   return createServerClient<Database>(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
     {
       cookies: {
         getAll() {
