@@ -20,6 +20,7 @@ export type Database = {
           name: string;
           pushed_at: string;
           source_hash: string | null;
+          stack: string[];
           stars: number;
           updated_at: string;
           url: string;
@@ -35,6 +36,7 @@ export type Database = {
           name: string;
           pushed_at: string;
           source_hash?: string | null;
+          stack?: string[];
           stars?: number;
           updated_at?: string;
           url: string;
@@ -50,6 +52,7 @@ export type Database = {
           name?: string;
           pushed_at?: string;
           source_hash?: string | null;
+          stack?: string[];
           stars?: number;
           updated_at?: string;
           url?: string;
