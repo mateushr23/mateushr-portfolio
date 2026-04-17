@@ -44,20 +44,37 @@ const jetbrainsMono = JetBrains_Mono({
   weight: ["400", "500", "600"],
 });
 
+// metadataBase is required in Next 16 so that relative image URLs (/og.png)
+// resolve to absolute URLs in generated <meta> tags. Fallback is the Vercel
+// alias; override via NEXT_PUBLIC_SITE_URL on preview/custom domains.
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://mateushr-portfolio.vercel.app";
+
 export const metadata: Metadata = {
+  metadataBase: new URL(SITE_URL),
   title: "Mateus Henrique — Portfolio",
   description:
     "Portfólio de Mateus Henrique — desenvolvedor full-stack em TypeScript. Bem-vindo, galáxia.",
   openGraph: {
     title: "Mateus Henrique — Portfolio",
     description: "Portfólio de Mateus Henrique — desenvolvedor full-stack em TypeScript.",
+    url: "/",
+    siteName: "Mateus Henrique",
     locale: "pt_BR",
     type: "website",
+    images: [
+      {
+        url: "/og.png",
+        width: 1200,
+        height: 630,
+        alt: "Mateus Henrique — Portfolio",
+      },
+    ],
   },
   twitter: {
     card: "summary_large_image",
     title: "Mateus Henrique — Portfolio",
     description: "Portfólio de Mateus Henrique — desenvolvedor full-stack em TypeScript.",
+    images: ["/og.png"],
   },
 };
 
