@@ -8,6 +8,7 @@ import type { MagicLinkState } from "@/app/admin/login/actions";
 const ERROR_COPY: Record<NonNullable<MagicLinkState["error"]>, string> = {
   login_error_invalid: "E-mail inválido.",
   login_error_rate_limit: "Muitas tentativas. Espere 1 minuto.",
+  login_error_provider_rate_limit: "Limite de envios atingido. Tente novamente em 1 hora.",
   login_error_generic: "Não foi possível enviar. Tente novamente.",
 };
 

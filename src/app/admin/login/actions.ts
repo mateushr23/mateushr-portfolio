@@ -8,8 +8,23 @@ import { createClient } from "@/lib/supabase/server";
 
 export type MagicLinkState = {
   ok: boolean;
-  error?: "login_error_invalid" | "login_error_rate_limit" | "login_error_generic";
+  error?:
+    | "login_error_invalid"
+    | "login_error_rate_limit"
+    | "login_error_provider_rate_limit"
+    | "login_error_generic";
 };
+
+// Supabase may signal a provider-side send-rate-limit either via HTTP 429
+// (AuthApiError.status) or via a string code like `over_email_send_rate_limit`
+// (newer) / `email_send_rate_limit_exceeded` (older). We sniff both shapes.
+function isProviderRateLimit(err: unknown): boolean {
+  if (err === null || typeof err !== "object") return false;
+  const e = err as { status?: number; code?: string };
+  if (e.status === 429) return true;
+  const code = typeof e.code === "string" ? e.code.toLowerCase() : "";
+  return code.includes("rate_limit") || code.includes("rate-limit");
+}
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const MAX_EMAIL_LENGTH = 254;
@@ -163,12 +178,17 @@ export async function requestMagicLink(
     // Redacted email keeps the recipient traceable without leaking the
     // full address; Supabase error shape is reduced to its safe `code`
     // field (never .message / .details / .hint).
+    const rateLimited = isProviderRateLimit(error);
     console.error("admin_action_failed", {
       code: (error as { code?: string }).code ?? (error as { status?: number }).status ?? "unknown",
       action: "requestMagicLink",
       email: redactEmail(email),
+      ...(rateLimited ? { rateLimited: true } : {}),
     });
-    return { ok: false, error: "login_error_generic" };
+    return {
+      ok: false,
+      error: rateLimited ? "login_error_provider_rate_limit" : "login_error_generic",
+    };
   }
 
   redirect(`/admin/login?sent=1&email=${toBase64(email)}`);
