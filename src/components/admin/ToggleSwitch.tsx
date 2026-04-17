@@ -82,7 +82,7 @@ export function ToggleSwitch({
           onChange={handleChange}
         />
         <span className="toggle-track" aria-hidden="true" />
-        <span className={labelHidden ? "sr-only" : "ml-3 font-mono text-sm text-text-muted"}>
+        <span className={labelHidden ? "sr-only" : "mono ml-3 text-sm text-(--color-accent)/70"}>
           {label}
         </span>
       </label>

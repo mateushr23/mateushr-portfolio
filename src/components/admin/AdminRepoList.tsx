@@ -34,14 +34,14 @@ export function AdminRepoList({ repos }: AdminRepoListProps) {
 
   return (
     <div className="flex flex-col gap-8">
-      <p className="eyebrow">
+      <p className="mono text-message uppercase tracking-widest text-(--color-accent) opacity-70">
         REPOS · {sorted.length} TOTAL · {hiddenCount} OCULTOS
       </p>
 
       {/* Header row — hidden on mobile where each row is already labelled. */}
       <div
         aria-hidden="true"
-        className="hidden grid-cols-[48px_1fr_120px_120px_80px] gap-6 border-b border-border px-2 pb-3 font-mono text-[0.7rem] uppercase tracking-[0.08em] text-text-dim md:grid"
+        className="mono hidden grid-cols-[48px_1fr_120px_120px_80px] gap-6 border-b border-border px-2 pb-3 text-[0.7rem] uppercase tracking-[0.08em] text-(--color-accent)/60 md:grid"
       >
         <span>NUM</span>
         <span>NOME</span>

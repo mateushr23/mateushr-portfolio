@@ -12,6 +12,11 @@ const ERROR_COPY: Record<NonNullable<MagicLinkState["error"]>, string> = {
   login_error_generic: "Não foi possível enviar. Tente novamente.",
 };
 
+// Mirrors the INPUT_CLASS constant in ContactForm.tsx so admin + public
+// inputs render identically (space theme parity).
+const INPUT_CLASS =
+  "w-full border border-[color:var(--color-border)] bg-transparent px-4 py-3 text-[length:var(--text-click)] text-[color:var(--color-accent)] placeholder:text-[color:var(--color-accent)]/40 focus:outline-none focus:border-[color:var(--color-accent-bright)]";
+
 interface MagicLinkFormProps {
   action: (prev: MagicLinkState | undefined, formData: FormData) => Promise<MagicLinkState>;
 }
@@ -34,9 +39,12 @@ export function MagicLinkForm({ action }: MagicLinkFormProps) {
   const errorMessage = state?.error ? ERROR_COPY[state.error] : null;
 
   return (
-    <form action={formAction} noValidate className="flex w-full flex-col gap-5">
+    <form action={formAction} noValidate className="flex w-full flex-col gap-6">
       <div className="flex flex-col gap-2">
-        <label htmlFor="admin-login-email" className="font-mono text-sm text-text-muted">
+        <label
+          htmlFor="admin-login-email"
+          className="label text-message uppercase tracking-[0.08em] text-(--color-accent)"
+        >
           e-mail
         </label>
         <input
@@ -47,7 +55,7 @@ export function MagicLinkForm({ action }: MagicLinkFormProps) {
           inputMode="email"
           required
           placeholder="voce@exemplo.com"
-          className="w-full border-b border-border bg-transparent px-0 py-3 font-mono text-base text-text outline-none transition-colors duration-200 placeholder:text-text-dim focus:border-accent"
+          className={INPUT_CLASS}
         />
       </div>
 
@@ -57,7 +65,7 @@ export function MagicLinkForm({ action }: MagicLinkFormProps) {
         <p
           role="alert"
           aria-live="polite"
-          className="border-l-2 border-[color:var(--color-danger)] pl-3 font-mono text-sm text-[color:var(--color-danger)]"
+          className="mono border-l-2 border-danger pl-3 text-message text-danger"
         >
           {errorMessage}
         </p>
@@ -73,7 +81,7 @@ function SubmitButton() {
       type="submit"
       disabled={pending}
       aria-busy={pending}
-      className="mt-2 inline-flex h-12 items-center justify-center border border-text px-6 font-mono text-sm uppercase tracking-[0.08em] text-text transition-colors duration-200 hover:border-accent hover:text-accent disabled:cursor-wait disabled:opacity-70"
+      className="label inline-flex items-center gap-4 self-start text-corner uppercase tracking-[0.08em] text-(--color-accent) transition-colors duration-200 hover:text-accent-bright disabled:cursor-wait disabled:opacity-70"
     >
       {pending ? "enviando…" : "enviar link"}
     </button>

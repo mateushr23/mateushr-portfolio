@@ -5,7 +5,7 @@ import { Suspense } from "react";
 import { AdminHeader } from "@/components/admin/AdminHeader";
 import { AdminRepoList } from "@/components/admin/AdminRepoList";
 import { RefreshButton } from "@/components/admin/RefreshButton";
-import { PaperGrain } from "@/components/PaperGrain";
+import { Starfield } from "@/components/space/Starfield";
 import { isAllowlisted, redactEmail } from "@/lib/admin/allowlist";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
@@ -77,7 +77,7 @@ export default async function AdminPage() {
       <a href="#admin-main" className="skip-link">
         Pular para conteúdo
       </a>
-      <PaperGrain />
+      <Starfield />
       <AdminHeader email={user.email ?? undefined} />
       <main id="admin-main" className="relative z-10">
         <section
@@ -86,10 +86,15 @@ export default async function AdminPage() {
         >
           <div className="mb-10 flex flex-col gap-6 md:flex-row md:items-center md:justify-between md:gap-8">
             <div className="flex flex-col gap-3">
-              <p id="admin-list-heading" className="eyebrow">
+              <p
+                id="admin-list-heading"
+                className="mono text-message uppercase tracking-widest text-(--color-accent) opacity-70"
+              >
                 REPOS
               </p>
-              <h1 className="font-display text-h1 italic leading-[1.05] text-text">curadoria</h1>
+              <h1 className="font-display text-hero font-bold uppercase leading-none tracking-[0.025em] text-(--color-accent)">
+                curadoria
+              </h1>
             </div>
             <RefreshButton action={refreshRepos} />
           </div>
