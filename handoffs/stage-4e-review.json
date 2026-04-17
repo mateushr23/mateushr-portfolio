@@ -1,0 +1,106 @@
+{
+  "stage": "review",
+  "stage_id": "4e-review",
+  "created": "2026-04-16",
+  "agent": "code-reviewer",
+  "extends": "stage-4d-qa.json",
+  "scope": "Final pre-PR code review of Stage 4 (Supabase Auth + /admin dashboard + is_featured/is_hidden toggles + manual refresh + Stage 3 polish bundle). 19 new files + 8 modified files. QA P1s (3 items) confirmed fixed in implementation.",
+  "status": "APPROVED_WITH_FIXES_APPLIED",
+  "critical": 0,
+  "warnings": 3,
+  "suggestions": 2,
+  "review_cycles": 1,
+  "verdict_summary": "No critical findings. Service-role key isolation verified (only imported from server-only modules). Every server action gates on assertAdmin() / allowlist. safeHref rejects javascript:/data:/file:/vbscript:/relative/empty. React auto-escapes the confirmation email echo (no dangerouslySetInnerHTML anywhere). QA P1s verified closed in source: ToggleSwitch rollback announces correct restored state, timing equalizer now uses jittered [500,700]ms for non-allowlisted and Promise.all floor of 600ms for allowlisted (no longer distinguishable), skip-links present on both /admin and /admin/login. 4 trivial fixes applied inline (<3 lines each, no auth-logic changes). 3 warnings remain as findings (all previously known QA P2s that need larger refactors or explicit design decisions).",
+  "security_audit_checklist": {
+    "service_role_key_leak": "PASS — SUPABASE_SERVICE_ROLE_KEY only referenced in src/lib/supabase/admin.ts. createAdminClient is only imported from sync.ts, src/app/admin/actions.ts, src/app/admin/page.tsx, and src/lib/sync/sync.ts — all server files. Runtime `typeof window` backstop also present.",
+    "server_action_authorization": "PASS — toggleFeatured, toggleHidden, refreshRepos, and requestMagicLink all start with assertAdmin() (for mutating actions) or isAllowlisted() (for magic-link). No mutation path bypasses the check.",
+    "get_handlers_do_not_mutate": "PASS — /auth/callback GET only exchanges code + signs out on denial; /admin/logout GET returns 405; no other GET performs DB writes.",
+    "hardcoded_secrets": "PASS — grep for api_key/secret/password/token found no literals. .env.example uses empty placeholders.",
+    "sql_injection": "PASS — all DB access goes through Supabase client's parameterized query builder (.eq, .update, .select). No raw SQL strings.",
+    "xss_user_input": "PASS — MagicLinkConfirmation renders submittedEmail inside <strong> (React auto-escapes). No dangerouslySetInnerHTML anywhere in src/. After inline fix, decoded email is also regex-validated so arbitrary strings can't leak into the confirmation screen as a phishing surface.",
+    "open_redirect": "PASS — /auth/callback always redirects to hard-coded /admin or /admin/login?error=denied; Server Action redirect targets are literal paths; no request.nextUrl.searchParams ever used as a redirect destination.",
+    "safe_href_scheme_guard": "PASS — safeHref accepts only http:/https:. Verified behavior for javascript:, data:, file:, vbscript: (new URL parses them but protocol filter rejects), for '//evil.com' (throws in new URL with no base → returns undefined), for null/undefined/empty (early return), for malformed URLs (try/catch returns undefined). Consumed by IndexRow AND AdminRepoRow — both fall back to '#' + aria-disabled + tabIndex=-1.",
+    "max_w_container_dry": "PASS — no remaining `max-w-[1100px]` literals in src/. All 7 consumers (Hero, SiteHeader, SiteFooter, ProjectIndex, AdminHeader, AdminPage, AdminLogin) use `max-w-container`. --container-container: 1100px registered in @theme so the utility is generated.",
+    "admin_noindex": "PASS — /admin and /admin/login both declare `robots: { index: false, follow: false }` via generateMetadata. proxy.ts also sets X-Robots-Tag: noindex, nofollow on every /admin* response.",
+    "session_defense_in_depth": "PASS — three layers: (1) proxy.ts redirects unauthenticated /admin* to /admin/login, (2) /admin/page.tsx re-verifies session + allowlist and signs out on mismatch, (3) every server action runs assertAdmin() as its first line. A middleware bypass still hits layers 2 and 3.",
+    "qa_p1_toggle_rollback": "PASS — ToggleSwitch.tsx:62 now correctly uses `setLiveMessage(prev ? srOn : srOff)` in catch block so screen readers announce the restored state, not a coincidentally-wrong fixed srOff.",
+    "qa_p1_timing_equalizer": "PASS — login/actions.ts uses randomEqualizerDelay() in [500,700] for the non-allowlisted branch and Promise.all([signInWithOtp, sleep(600)]) on the allowlisted branch. Both branches now overlap in the [600,900]ms region rather than the original fixed-300ms-vs-variable disparity.",
+    "qa_p1_admin_skip_links": "PASS — /admin/page.tsx and /admin/login/page.tsx both render `<a href='#admin-main' className='skip-link'>Pular para conteúdo</a>` above the AdminHeader, with id='admin-main' on <main>."
+  },
+  "issues": [
+    {
+      "severity": "WARNING",
+      "file": "src/app/admin/logout/route.ts",
+      "line": 15,
+      "category": "security / CSRF",
+      "issue": "POST /admin/logout has no Origin/Referer check. Next.js's built-in Server Action CSRF protection does NOT cover Route Handlers — a cross-origin `<form action='https://mateushr.com/admin/logout' method='post'>` auto-submitted via JS on a malicious site would log the user out. Impact is low (logout is not destructive to data, session is recoverable) but violates defense-in-depth and QA's P2 finding is still open.",
+      "fix": "Option A (preferred): convert the logout handler to a Server Action so Next.js's origin check applies. Refactor AdminHeader to use `<form action={logoutAction}>` with the action defined in src/app/admin/actions.ts, and delete route.ts. Option B (minimal): before `supabase.auth.signOut()`, verify `request.headers.get('origin') === request.nextUrl.origin` (or fall back to host equality on the Referer URL) and return 403 on mismatch. Not applied inline because this touches auth-boundary logic and should be reviewed separately."
+    },
+    {
+      "severity": "WARNING",
+      "file": "src/app/admin/login/actions.ts",
+      "line": 39,
+      "category": "security / memory",
+      "issue": "rateMap leaks empty-array keys over long-running lambdas. Abandoned keys whose entries all expire but that never receive another request stay in the Map forever. Per-email-only keying (no per-IP complement) also means a single attacker with N distinct emails never hits a single-email bucket. QA P2 still open. Not load-bearing for a single-admin allowlist, but a memory-and-bypass hygiene issue.",
+      "fix": "Add an opportunistic prune step at the end of underRateLimit() (walk 1-2 other keys per call and delete entries where `filter` returns []) OR migrate the rate-limit store to Vercel KV / Upstash. Not applied inline — the opportunistic prune is 4+ lines in the hot path and touches auth rate-limit logic, so it deserves a focused follow-up rather than a drive-by edit."
+    },
+    {
+      "severity": "WARNING",
+      "file": "src/app/admin/actions.ts",
+      "line": 48,
+      "category": "security / PII boundary",
+      "issue": "`console.error('[admin/toggleFeatured] update failed', error.message)` logs the raw Supabase error.message. Supabase errors sometimes include table/column metadata and RLS policy names — fine for a single-admin project but nonetheless a schema-leak surface if Vercel logs are ever shared with third parties.",
+      "fix": "Wrap the message: `console.error('[admin/toggleFeatured] update failed', { code: error.code, hint: '<redacted>' })` or log only `error.code`. Not applied inline — redaction policy is a project decision worth explicit discussion rather than a silent edit."
+    },
+    {
+      "severity": "SUGGESTION",
+      "file": "src/components/admin/RefreshButton.tsx",
+      "line": 33,
+      "category": "a11y / UX",
+      "issue": "Phase auto-resets to idle 3s after success/error regardless of focus. If the keyboard user tabs to the button at second 2.9 they see 'atualizado · 12 repos' then the label shifts to 'atualizar agora' under them. aria-live already announced the state, so it's not a blocker — just a minor flicker.",
+      "fix": "Pause the reset timer when the button has :focus-within, or extend the timeout to 5s. Nice-to-have; current behavior is acceptable."
+    },
+    {
+      "severity": "SUGGESTION",
+      "file": "src/components/admin/AdminRepoRow.tsx",
+      "line": 85,
+      "category": "UX consistency",
+      "issue": "On mobile (< md) the two toggle sections render visible mono captions 'destacar' / 'ocultar', but the GitHub-arrow column only carries an aria-label — no visible 'github' caption. Asymmetric with the toggle labels. Not a WCAG failure (the arrow is decorative and the anchor is labelled), just a small pattern break.",
+      "fix": "Add `<span className='font-mono text-[0.75rem] text-text-muted md:hidden'>github</span>` next to the arrow anchor to match the destacar/ocultar pattern."
+    }
+  ],
+  "fixes_applied_inline": [
+    {
+      "file": "src/app/admin/login/page.tsx",
+      "lines": "21-36",
+      "what": "Re-validate base64-decoded email against the same EMAIL_REGEX the Server Action uses. Empty string is returned (which triggers the form fallback) when the decoded payload isn't a well-formed email ≤254 chars. Closes QA P2 about phishing-page weaponization via crafted ?sent=1&email=<b64>.",
+      "diff": "function decodeEmail(b64: string | undefined): string {\n  if (!b64) return \"\";\n  try {\n-    return Buffer.from(b64, \"base64url\").toString(\"utf8\");\n+    const decoded = Buffer.from(b64, \"base64url\").toString(\"utf8\");\n+    return EMAIL_ECHO_REGEX.test(decoded) && decoded.length <= 254 ? decoded : \"\";\n  } catch {\n    return \"\";\n  }\n}"
+    },
+    {
+      "file": "src/components/admin/AdminRepoRow.tsx",
+      "lines": "45",
+      "what": "Language fallback changed from 'TypeScript' to '—' so a non-TS repo with a missing language column isn't mislabeled. Matches QA P3 recommendation.",
+      "diff": "-  const language = repo.language ?? \"TypeScript\";\n+  const language = repo.language ?? \"—\";"
+    },
+    {
+      "file": "src/components/admin/AdminRepoList.tsx",
+      "lines": "30",
+      "what": "Defensive null-guard on pushed_at sort. The Database type marks pushed_at as NOT NULL, but guarding `(x ?? '').localeCompare(...)` costs nothing and immunizes the UI from a schema migration that ever nulls the column. Addresses QA P2 sort fragility.",
+      "diff": "-    return b.pushed_at.localeCompare(a.pushed_at);\n+    return (b.pushed_at ?? \"\").localeCompare(a.pushed_at ?? \"\");"
+    }
+  ],
+  "gates": {
+    "tsc_noemit": "PASS — 0 errors",
+    "eslint_strict": "PASS — 0 warnings (--max-warnings 0)",
+    "next_build": "PASS — compiled in 3.9s, 6 routes generated, Proxy (Middleware) recognized",
+    "review_script_tailwind": "PASS — 0 findings from tailwind_canonical_linter (no bg-gradient-*, no arbitrary-value classes with canonical equivalents)",
+    "secret_scan": "PASS — no hardcoded credentials in src/"
+  },
+  "recommendation": "APPROVE for PR. The 3 warnings are all previously-known QA P2s that carry over — two of them (logout CSRF, rate-map leak) should be addressed in a focused follow-up (tracked in open_questions). The third (PII log boundary) is a single-admin-project-acceptable issue that can be deferred until the app grows beyond one user. The 2 suggestions are pure nice-to-haves.",
+  "files_created": ["D:/ClaudeProjects/mateushr-portfolio/handoffs/stage-4e-review.json"],
+  "files_modified_inline": [
+    "D:/ClaudeProjects/mateushr-portfolio/src/app/admin/login/page.tsx",
+    "D:/ClaudeProjects/mateushr-portfolio/src/components/admin/AdminRepoRow.tsx",
+    "D:/ClaudeProjects/mateushr-portfolio/src/components/admin/AdminRepoList.tsx"
+  ]
+}

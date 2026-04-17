@@ -13,6 +13,13 @@
   --color-border: #26252a;
   --color-border-strong: #36343b;
 
+  /* Stage 4 admin tokens — sage/terracotta are role-specific so they stay
+   * outside the core editorial palette. surface-admin is a half-step
+   * between primary and surface used only as the admin row hover band. */
+  --color-success: #6b8f71;
+  --color-danger: #c96e5a;
+  --color-surface-admin: #101012;
+
   /* Fonts — bound to next/font CSS variables set on <html> */
   --font-display: var(--font-fraunces);
   --font-sans: var(--font-geist);
@@ -38,6 +45,10 @@
 
   /* Container */
   --spacing-container: 1100px;
+  /* Tailwind v4 registers `--container-*` tokens as `max-w-*` utilities.
+   * This enables `max-w-container` across headers, hero, index, footer,
+   * and admin surfaces — replacing literal `max-w-[1100px]` duplicates. */
+  --container-container: 1100px;
 
   /* Easing */
   --ease-out-expo: cubic-bezier(0.2, 0.8, 0.2, 1);
@@ -206,5 +217,141 @@
   }
   .index-arrow {
     transition: none;
+  }
+}
+
+/* Admin refresh button spinner — only runs while aria-busy=true. */
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+.refresh-glyph[data-busy="true"] {
+  animation: spin 900ms linear infinite;
+  display: inline-block;
+}
+
+/* Toggle switch — hand-rolled from native checkbox + label-as-track.
+ *
+ * Semantics come from the native <input type="checkbox"> (checked, space
+ * toggles, form-submit works). The visual track is the wrapping <label>,
+ * and the thumb is a ::before pseudo-element on the same label. We proxy
+ * focus styles from the sr-only input to the label via :has(:focus-visible)
+ * so the visible track shows the global focus ring. */
+.toggle-switch {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-start;
+  padding: 0.5rem 0.125rem; /* py-2 px-1 — keeps hit area >= 44px tall */
+  cursor: pointer;
+  user-select: none;
+}
+.toggle-switch > input[type="checkbox"] {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+.toggle-switch .toggle-track {
+  position: relative;
+  display: inline-block;
+  width: 40px;
+  height: 22px;
+  background-color: var(--color-surface-elevated);
+  border: 1px solid var(--color-border);
+  border-radius: 9999px;
+  transition:
+    background-color 220ms var(--ease-out-expo),
+    border-color 220ms var(--ease-out-expo);
+}
+.toggle-switch .toggle-track::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 3px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background-color: var(--color-text-dim);
+  transform: translate(0, -50%);
+  transition:
+    transform 220ms var(--ease-out-expo),
+    background-color 220ms var(--ease-out-expo),
+    opacity 220ms var(--ease-out-expo);
+}
+
+/* Hover: stronger border, no thumb movement. */
+.toggle-switch:hover > input:not(:disabled) ~ .toggle-track {
+  border-color: var(--color-border-strong);
+}
+
+/* Focus: proxy the focus ring from the hidden checkbox to the visual track. */
+.toggle-switch:has(input:focus-visible) .toggle-track {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 3px;
+  border-radius: 9999px;
+}
+
+/* ON state — base (sage, used by the hidden variant). */
+.toggle-switch > input:checked ~ .toggle-track {
+  background-color: rgba(107, 143, 113, 0.2);
+  border-color: var(--color-success);
+}
+.toggle-switch > input:checked ~ .toggle-track::before {
+  transform: translate(18px, -50%);
+  background-color: var(--color-success);
+}
+
+/* ON state — featured variant (amber, matches public-site accent). */
+.toggle-switch[data-variant="featured"] > input:checked ~ .toggle-track {
+  background-color: rgba(232, 164, 76, 0.2);
+  border-color: var(--color-accent);
+}
+.toggle-switch[data-variant="featured"] > input:checked ~ .toggle-track::before {
+  background-color: var(--color-accent);
+}
+
+/* Disabled state. */
+.toggle-switch > input:disabled ~ .toggle-track {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Loading (pending server action). Parent label sets data-pending="true". */
+@keyframes toggle-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+.toggle-switch[data-pending="true"] .toggle-track::before {
+  animation: toggle-pulse 900ms linear infinite;
+}
+.toggle-switch[data-pending="true"] .toggle-track {
+  border-color: rgba(232, 164, 76, 0.3);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .toggle-switch .toggle-track,
+  .toggle-switch .toggle-track::before {
+    transition: none;
+  }
+  .toggle-switch[data-pending="true"] .toggle-track::before {
+    animation: none;
+  }
+  .refresh-glyph[data-busy="true"] {
+    animation: none;
   }
 }

@@ -1,0 +1,357 @@
+{
+  "stage": "qa",
+  "stage_id": "4d-qa",
+  "created": "2026-04-16",
+  "agent": "qa-engineer",
+  "extends": "stage-4c-implementation.json",
+  "status": "PASS_WITH_WARNINGS",
+  "summary": "Static QA audit of Stage 4 admin surface. Auth architecture is sound (three-layer defense, timing equalizer, server-only allowlist, PII redaction). Two P1 correctness bugs found in ToggleSwitch rollback announcement and a subtle timing-disparity risk. No P0 security holes. Admin pages missing skip-link; sitemap exclusion still a future TODO. Test infra still not scaffolded — catalog extended.",
+  "findings": [
+    {
+      "severity": "P1",
+      "category": "a11y / correctness",
+      "file": "src/components/admin/ToggleSwitch.tsx",
+      "line": 62,
+      "issue": "On server-action failure, the component rolls back `checked` to `prev` but unconditionally announces `srOff` via the aria-live region. If the user flipped OFF->ON and the action rejected, state correctly returns to OFF but the announcement for the previous ON state's rollback is 'Destaque desativado' — which is correct only by coincidence (because prev was OFF). If the user flipped ON->OFF and the action rejected, state returns to ON but the live region incorrectly announces 'Destaque desativado'. Screen reader users get wrong state.",
+      "recommendation": "Replace setLiveMessage(srOff) in the catch block with setLiveMessage(prev ? srOn : srOff) so the announcement matches the restored state."
+    },
+    {
+      "severity": "P1",
+      "category": "security / timing",
+      "file": "src/app/admin/login/actions.ts",
+      "line": 77,
+      "issue": "Timing equalizer is a fixed 300ms sleep BEFORE redirect on non-allowlist, but the allowlisted path runs signInWithOtp which can take 200-900ms over WAN depending on Supabase region + SMTP queue. An attacker measuring wallclock over many samples can still side-channel allowlist membership (fixed 300ms vs variable 200-900ms produces distinguishable distributions). The handoff claims '±50ms tolerance' but real-world variance is much wider.",
+      "recommendation": "Either (a) fire-and-forget the signInWithOtp without awaiting (Supabase returns quickly; the email send is queued) so latency is bounded, or (b) use Promise.all([signInWithOtp, sleep(300)]) on the allowlisted path to enforce a minimum, and increase the non-allowlisted pad to at least 500-600ms to cover Supabase p95. Current implementation is better than nothing but is not 'indistinguishable'."
+    },
+    {
+      "severity": "P1",
+      "category": "a11y",
+      "file": "src/app/admin/page.tsx",
+      "line": 72,
+      "issue": "Admin pages (both /admin and /admin/login) do NOT render a skip-link. Public / has one, admin pages have a sticky h-16 AdminHeader and no way for keyboard users to bypass it. WCAG 2.1 SC 2.4.1 (Bypass Blocks) is partially addressed by the <main> landmark but the .skip-link CSS class exists and isn't reused here.",
+      "recommendation": "Add <a href='#admin-main' className='skip-link'>Pular para conteúdo</a> above AdminHeader on both /admin/page.tsx and /admin/login/page.tsx, and set id='admin-main' on the <main> element."
+    },
+    {
+      "severity": "P2",
+      "category": "security / memory",
+      "file": "src/app/admin/login/actions.ts",
+      "line": 26,
+      "issue": "rateMap is never pruned globally. underRateLimit() filters stale entries WITHIN an existing key's array, but keys whose entries all expire are never deleted from the Map. Over a long-lived Vercel lambda + abusive submission pattern, the Map grows unbounded with empty arrays. Also: the rate limit is keyed on normalized email only, so a single attacker can flood N distinct emails and never hit a single-email rate. Per-IP cap would complement this.",
+      "recommendation": "After filtering recent entries, if `recent.length === 0` delete the key. Optionally add a second Map keyed by `request.ip` with a lower ceiling (e.g. 20/15min). Noted in stage-4c open_questions as acceptable — keep as P2 until the allowlist grows."
+    },
+    {
+      "severity": "P2",
+      "category": "security / CSRF",
+      "file": "src/app/admin/logout/route.ts",
+      "line": 15,
+      "issue": "POST /admin/logout has no CSRF protection. Next.js's built-in Server Action CSRF check does NOT apply to Route Handlers. A cross-origin form auto-submit could log the user out. Low impact (logout is not destructive to data) but violates defense in depth.",
+      "recommendation": "Either (a) convert logout to a Server Action invoked by the AdminHeader form instead of a Route Handler, or (b) verify request.headers.get('origin') / 'referer' matches request.nextUrl.origin before running signOut. (a) is cleaner."
+    },
+    {
+      "severity": "P2",
+      "category": "correctness",
+      "file": "src/components/admin/AdminRepoList.tsx",
+      "line": 30,
+      "issue": "Sort uses b.pushed_at.localeCompare(a.pushed_at) to achieve DESC. This works for ISO 8601 strings (which Supabase returns) but is fragile — if the DB ever returns a different format or null, localeCompare will either mis-sort or throw. The design spec says 'is_hidden ASC, pushed_at DESC', which page.tsx already fetches in that order — the resort is redundant against already-sorted data but needed because page.tsx orders by pushed_at only, not is_hidden.",
+      "recommendation": "Either (a) add is_hidden to the page.tsx .order() chain and drop the client-side sort entirely, or (b) guard the comparator with `(b.pushed_at ?? '').localeCompare(a.pushed_at ?? '')`. Option (a) keeps a single source of truth."
+    },
+    {
+      "severity": "P2",
+      "category": "a11y",
+      "file": "src/components/admin/AdminRepoRow.tsx",
+      "line": 85,
+      "issue": "On mobile (< md), the two toggle sections render the toggle AND a mono text label beside it ('destacar' / 'ocultar'). But the ToggleSwitch already renders a sr-only label (labelHidden=true). The visible mono label is not associated with the input (not a <label htmlFor>), so it's decorative — fine. But there's no visible label for the GitHub arrow anchor on mobile other than the aria-label — a visible 'github' caption would help mobile keyboard users.",
+      "recommendation": "Add a visible 'github' text on mobile beside the arrow to match the destacar/ocultar pattern. Minor UX consistency — not a WCAG failure."
+    },
+    {
+      "severity": "P2",
+      "category": "correctness",
+      "file": "src/components/admin/MagicLinkConfirmation.tsx",
+      "line": 24,
+      "issue": "submittedEmail comes from decodeEmail() in page.tsx which returns '' on corrupt base64. Page.tsx gates rendering on `sent && submittedEmail` (line 51), so a corrupt param falls through to the form. Good. BUT: an attacker crafting a link with `?sent=1&email=<malicious>` could pass an arbitrary decoded string (the regex/format is never re-validated here) and render it inside <strong> via React — React auto-escapes so XSS is blocked, but an attacker could produce a phishing-confirmation page at /admin/login?sent=1&email=<b64-of-attacker-crafted-string>. Harm is low (no auth action was taken) but the confirmation screen is convincing.",
+      "recommendation": "Re-validate the decoded email against EMAIL_REGEX in decodeEmail(); if it doesn't match, return '' so the form renders instead of confirmation. Also consider dropping the email echo entirely — the confirmation reads fine without it."
+    },
+    {
+      "severity": "P3",
+      "category": "noise / PII boundary",
+      "file": "src/app/admin/actions.ts",
+      "line": 48,
+      "issue": "console.error for toggle failures dumps `error.message` directly. Supabase error messages sometimes include table/column names — fine for server logs but may leak schema detail to Vercel log aggregators.",
+      "recommendation": "Acceptable for a single-admin app. If this ever becomes multi-tenant, wrap in a generic 'toggle_update_failed' log with redacted IDs."
+    },
+    {
+      "severity": "P3",
+      "category": "design fidelity",
+      "file": "src/components/admin/AdminRepoRow.tsx",
+      "line": 45,
+      "issue": "Language fallback hardcodes 'TypeScript' when repo.language is null. Design spec didn't mandate a specific fallback; this implicitly assumes every repo is TS. A genuinely non-TS repo with a missing language column would mislabel.",
+      "recommendation": "Fall back to 'Unknown' or '—' instead of asserting TypeScript."
+    },
+    {
+      "severity": "P3",
+      "category": "a11y / ergonomics",
+      "file": "src/components/admin/RefreshButton.tsx",
+      "line": 33,
+      "issue": "After success/error, phase auto-resets to idle after 3s. If the user tabs to the button at second 2.9, they see 'atualizado · 12 repos' and then the label changes under them. No aria-live suppression on this transition.",
+      "recommendation": "Acceptable — the aria-live region already announced the result. Consider pausing the reset timer when the button is focused."
+    }
+  ],
+  "manual_smoke_trace": {
+    "happy_path_allowlisted_login_and_toggle": [
+      "1. User navigates to /admin. proxy.ts runs getUser() (no session). Redirects 307 to /admin/login with X-Robots-Tag: noindex.",
+      "2. /admin/login renders AdminHeader (no email) + MagicLinkForm. Metadata sets robots: noindex,nofollow.",
+      "3. User types 'mateushr23@gmail.com' and hits Enter. MagicLinkForm invokes requestMagicLink server action.",
+      "4. Action validates shape (passes), rate-limits (1/5 in window), isAllowlisted returns true.",
+      "5. headers().get('host')/get('x-forwarded-proto') build callback URL. supabase.auth.signInWithOtp sends email.",
+      "6. Action throws redirect('/admin/login?sent=1&email=<b64>'). MagicLinkForm form navigation lands on confirmation state.",
+      "7. MagicLinkConfirmation renders, FocusOnMount focuses 'enviar novo link' anchor. Screen reader announces 'enviar novo link, link'.",
+      "8. User opens email, clicks magic link. Browser hits /auth/callback?code=xyz.",
+      "9. Route exchanges code for session, isAllowlisted passes, redirects to /admin.",
+      "10. proxy.ts runs getUser() — now has user. No redirect. X-Robots-Tag set.",
+      "11. /admin page: createClient() reads session, isAllowlisted passes. createAdminClient reads all repos bypassing RLS.",
+      "12. AdminHeader renders with email in mono (truncated to 200px). RefreshButton + AdminRepoList render below.",
+      "13. User clicks featured toggle on row 3. ToggleSwitch handleChange flips local state OFF->ON immediately (optimistic), announces srLoading='Salvando…'.",
+      "14. startTransition fires toggleFeatured.bind(repo.id) — server action runs assertAdmin, updates row, revalidatePath('/admin'), revalidatePath('/').",
+      "15. Promise resolves, live region updates to 'Destaque ativado'. Thumb settles into the amber ON state. RSC re-renders with new row data.",
+      "16. User clicks refresh. RefreshButton onClick sets phase=pending, label becomes 'buscando no github…', ↻ glyph spins (unless reduced-motion).",
+      "17. refreshRepos runs assertAdmin then syncRepos() directly (no HTTP hop). Returns counters.",
+      "18. Phase=success, label 'atualizado · 15 repos' in sage success color. Live region says 'Atualizado: 15 repos.'. 3s later resets to idle."
+    ],
+    "denial_path_non_allowlisted_email": [
+      "1. Attacker navigates to /admin/login. Renders form. Types 'attacker@example.com', submits.",
+      "2. requestMagicLink: shape OK, rate-limit OK, isAllowlisted=false.",
+      "3. await setTimeout(300) — no Supabase call. redirect('/admin/login?sent=1&email=<b64>').",
+      "4. Confirmation page renders 'Se attacker@example.com estiver autorizado, o link foi enviado.'",
+      "5. Attacker never receives email. No distinguishing signal from the allowlisted path EXCEPT for the timing disparity flagged in P1 above (300ms fixed vs ~200-900ms for real signInWithOtp).",
+      "6. Alternate path — attacker somehow gets a magic link (e.g., typo, shared inbox). Clicks /auth/callback?code=xyz.",
+      "7. Route exchanges code successfully (Supabase creates user row). email = 'attacker@example.com'. isAllowlisted=false.",
+      "8. console.warn with redactEmail ('a...@example.com'). supabase.auth.signOut(). redirect('/admin/login?error=denied').",
+      "9. /admin/login?error=denied renders AuthDeniedBanner above MagicLinkForm. role=alert + FocusOnMount focuses banner. Message is generic ('Este e-mail não tem permissão de acesso.') — does NOT echo attempted email."
+    ],
+    "session_expired_back_to_admin": [
+      "1. User leaves /admin open for hours. Session cookie expires (Supabase default 1h access token, 1w refresh).",
+      "2. User returns, clicks a toggle. ToggleSwitch optimistically flips, announces 'Salvando…'.",
+      "3. Server action runs, getUser() fails silently (no user). assertAdmin throws new Error('not_authorized').",
+      "4. ToggleSwitch catch block: rolls back checked to prev, announces srOff. [P1 bug — should announce based on prev, not fixed srOff.]",
+      "5. User refreshes page. proxy.ts getUser() returns null. Redirect to /admin/login (fresh, no banner).",
+      "6. UX quality: no explicit 'session expired' message — user is silently bounced. Acceptable for a single-admin app but a toast 'sessão expirada, entre novamente' would be friendlier.",
+      "7. Edge case: if getUser() DOES return a user but the session email is no longer on the allowlist (admin removed themselves), /admin/page.tsx signs them out and redirects to /admin/login?error=denied. AuthDeniedBanner shows. User re-submits and lands back in the confirmation page forever. Effectively a lockout — intentional."
+    ]
+  },
+  "test_harness_targets": [
+    {
+      "file": "src/lib/safe-url.test.ts",
+      "priority": "P1",
+      "tool": "vitest",
+      "scenarios_to_cover": [
+        "safeHref returns cleaned URL for http:// and https://",
+        "safeHref returns undefined for javascript:, data:, file:, vbscript:, chrome-extension:",
+        "safeHref returns undefined for null / undefined / empty string / whitespace",
+        "safeHref returns undefined for malformed URLs that throw in new URL()",
+        "safeHref re-serializes (e.g. https://EXAMPLE.com/ normalizes host casing)"
+      ]
+    },
+    {
+      "file": "src/lib/admin/allowlist.test.ts",
+      "priority": "P1",
+      "tool": "vitest",
+      "scenarios_to_cover": [
+        "returns false for null, undefined, empty string",
+        "returns false when SUPABASE_ADMIN_ALLOWLIST env is unset",
+        "returns true for exact match (single entry)",
+        "returns true for case-insensitive match",
+        "returns true with surrounding whitespace on env entry",
+        "returns true for one of multiple comma-separated entries",
+        "redactEmail returns first char + ...@domain for valid email",
+        "redactEmail returns '<malformed>' for strings without @",
+        "redactEmail returns '<none>' for nullish"
+      ]
+    },
+    {
+      "file": "src/app/admin/login/actions.test.ts",
+      "priority": "P1",
+      "tool": "vitest",
+      "scenarios_to_cover": [
+        "returns login_error_invalid for empty / non-email / >254 char",
+        "returns login_error_rate_limit after 5 submits in 15min window (same email)",
+        "non-allowlisted email waits TIMING_EQUALIZER_MS and redirects to ?sent=1",
+        "allowlisted email calls signInWithOtp with correct emailRedirectTo and redirects to ?sent=1",
+        "returns login_error_generic when signInWithOtp errors",
+        "returns login_error_generic when host header missing",
+        "rate-limit map prunes stale entries after 15min"
+      ]
+    },
+    {
+      "file": "src/app/auth/callback/route.test.ts",
+      "priority": "P1",
+      "tool": "vitest",
+      "scenarios_to_cover": [
+        "redirects to /admin/login when ?code missing",
+        "redirects to /admin/login when exchangeCodeForSession fails",
+        "signs out + redirects to ?error=denied when email not allowlisted",
+        "redirects to /admin when email IS allowlisted",
+        "console.warn uses redactEmail for denied attempts"
+      ]
+    },
+    {
+      "file": "src/app/admin/actions.test.ts",
+      "priority": "P1",
+      "tool": "vitest",
+      "scenarios_to_cover": [
+        "assertAdmin throws when no session",
+        "assertAdmin throws when session email not allowlisted",
+        "assertAdmin passes when session email allowlisted",
+        "toggleFeatured returns {ok:false} on update error, no rethrow",
+        "toggleFeatured revalidatePath('/admin') and revalidatePath('/') on success",
+        "toggleHidden same invariants",
+        "refreshRepos calls syncRepos and returns counters sum"
+      ]
+    },
+    {
+      "file": "src/components/admin/ToggleSwitch.test.tsx",
+      "priority": "P1",
+      "tool": "vitest",
+      "scenarios_to_cover": [
+        "renders unchecked when defaultChecked=false",
+        "renders checked when defaultChecked=true",
+        "space toggles the checkbox",
+        "optimistic update: UI flips before action resolves",
+        "rollback on action rejection restores prev state (this test will catch the P1 above)",
+        "aria-live announces srLoading -> srOn on success",
+        "aria-live announces srLoading -> correct prev state on error (FAILS with current bug)",
+        "disabled prop disables input",
+        "pending state disables input during transition"
+      ]
+    },
+    {
+      "file": "src/components/admin/RefreshButton.test.tsx",
+      "priority": "P2",
+      "tool": "vitest",
+      "scenarios_to_cover": [
+        "click triggers action, phase=pending, label updates",
+        "success phase renders 'atualizado · N repos' in success tone",
+        "error phase renders error copy in danger tone",
+        "auto-resets to idle after 3s",
+        "disabled while busy",
+        "aria-live updates through each phase",
+        "↻ glyph gets data-busy='true' only while pending"
+      ]
+    },
+    {
+      "file": "src/components/admin/MagicLinkForm.test.tsx",
+      "priority": "P2",
+      "tool": "vitest",
+      "scenarios_to_cover": [
+        "renders email input with correct label/type",
+        "submit button switches label to 'enviando…' while pending",
+        "error slot renders with danger styling when action returns error",
+        "form is noValidate — error comes from server action"
+      ]
+    },
+    {
+      "file": "src/components/IndexRow.test.tsx",
+      "priority": "P2",
+      "tool": "vitest",
+      "scenarios_to_cover": [
+        "renders with safe http/https href",
+        "falls back to '#' + aria-disabled + tabIndex=-1 when url unsafe (javascript:, null)",
+        "no target='_blank' on unsafe url",
+        "formats pushed_at per pt-BR locale",
+        "hides stars row when stars === 0"
+      ]
+    },
+    {
+      "file": "src/components/admin/AdminRepoRow.test.tsx",
+      "priority": "P2",
+      "tool": "vitest",
+      "scenarios_to_cover": [
+        "name anchor uses safeRepoHref (unsafe url renders plain span)",
+        "github-arrow anchor uses safeRepoHref (unsafe url hides arrow)",
+        "both toggles render with correct variant and bound action",
+        "pushed_at formats via pt-BR short month + numeric year"
+      ]
+    },
+    {
+      "file": "src/components/admin/MagicLinkConfirmation.test.tsx",
+      "priority": "P2",
+      "tool": "vitest",
+      "scenarios_to_cover": [
+        "renders submitted email in mono",
+        "FocusOnMount focuses the resend anchor",
+        "React auto-escapes malicious email strings"
+      ]
+    },
+    {
+      "file": "src/components/admin/AuthDeniedBanner.test.tsx",
+      "priority": "P2",
+      "tool": "vitest",
+      "scenarios_to_cover": [
+        "role=alert",
+        "tabIndex=-1 and focused on mount",
+        "message does not include any passed email value"
+      ]
+    },
+    {
+      "file": "src/proxy.test.ts",
+      "priority": "P1",
+      "tool": "vitest",
+      "scenarios_to_cover": [
+        "unauthenticated /admin -> redirect /admin/login with X-Robots-Tag",
+        "unauthenticated /admin/login -> passes through",
+        "authenticated /admin/login -> redirect /admin",
+        "authenticated /admin -> passes through with X-Robots-Tag",
+        "/auth/callback and /admin/logout bypass the gate",
+        "non-admin routes pass through without headers"
+      ]
+    },
+    {
+      "file": "e2e/admin-auth.spec.ts",
+      "priority": "P1",
+      "tool": "playwright",
+      "scenarios_to_cover": [
+        "visit /admin without session -> lands on /admin/login",
+        "submit non-allowlist email -> confirmation page (email echoed, form hidden)",
+        "mock magic-link callback for non-allowlist -> denied banner, email NOT echoed",
+        "mock magic-link callback for allowlist -> lands on /admin with AdminHeader + list",
+        "toggle featured on a row -> persists after reload",
+        "toggle hidden on a row -> row moves to end of list (sort invariant)",
+        "logout -> /admin no longer accessible"
+      ]
+    },
+    {
+      "file": "e2e/a11y.spec.ts",
+      "priority": "P1",
+      "tool": "axe",
+      "scenarios_to_cover": [
+        "home (/) passes axe wcag2aa",
+        "/admin/login passes axe wcag2aa",
+        "/admin/login?error=denied passes axe wcag2aa",
+        "/admin/login?sent=1&email=<b64> passes axe wcag2aa",
+        "/admin (authenticated) passes axe wcag2aa",
+        "keyboard-only traversal of /admin reaches every toggle + refresh + logout"
+      ]
+    },
+    {
+      "file": "e2e/admin-rate-limit.spec.ts",
+      "priority": "P2",
+      "tool": "playwright",
+      "scenarios_to_cover": [
+        "six rapid submissions of the same email within 15min shows 'Muitas tentativas.'",
+        "different emails do NOT share the limit bucket (documents current behavior — also motivates IP-based limit)"
+      ]
+    },
+    {
+      "file": "e2e/seo-noindex.spec.ts",
+      "priority": "P2",
+      "tool": "playwright",
+      "scenarios_to_cover": [
+        "/admin response has X-Robots-Tag: noindex, nofollow header",
+        "/admin/login response has X-Robots-Tag: noindex, nofollow header",
+        "home / response has NO X-Robots-Tag header",
+        "/admin HTML includes <meta robots noindex,nofollow>"
+      ]
+    }
+  ],
+  "coverage_note": "No test infra exists yet. Stage 3 deferred Vitest + Playwright + axe-core scaffolding as a follow-up; that deferral carries through Stage 4. Coverage = 0% across the board. Creating the harness (vitest.config.ts, playwright.config.ts, src/test-setup.ts, src/mocks/handlers.ts, e2e/ directory, and the @axe-core/playwright dep) should happen in a dedicated 'test-infra' stage before or during Stage 5 review, then Stage 6 authors the tests from this catalog. 16 test files total; P1 priority (must-have for merge): 6 vitest + 2 e2e = 8 files.",
+  "files_created": ["D:/ClaudeProjects/mateushr-portfolio/handoffs/stage-4d-qa.json"]
+}
