@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 
-import { ProjectsCarousel } from "./ProjectsCarousel";
+import { ProjectsCarousel, type CarouselRepo } from "./ProjectsCarousel";
 import { ProjectsInvite } from "./ProjectsInvite";
 
 /**
@@ -28,7 +28,11 @@ import { ProjectsInvite } from "./ProjectsInvite";
 
 const TRANSITION_MS = 700;
 
-export function ProjectsScene() {
+interface ProjectsSceneProps {
+  repos: CarouselRepo[];
+}
+
+export function ProjectsScene({ repos }: ProjectsSceneProps) {
   const [view, setView] = useState<"invite" | "projects">("invite");
   const [openCount, setOpenCount] = useState(0);
 
@@ -85,7 +89,7 @@ export function ProjectsScene() {
         }}
         aria-hidden={!isProjects}
       >
-        <ProjectsCarousel key={openCount} />
+        <ProjectsCarousel key={openCount} repos={repos} />
       </div>
     </div>
   );

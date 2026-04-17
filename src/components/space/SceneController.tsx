@@ -6,6 +6,7 @@ import { ContactForm } from "./ContactForm";
 import { GalaxyHeadline } from "./GalaxyHeadline";
 import { NameBanner } from "./NameBanner";
 import { PresentationText } from "./PresentationText";
+import type { CarouselRepo } from "./ProjectsCarousel";
 import { ProjectsScene } from "./ProjectsScene";
 import { SkillsGrid } from "./SkillsGrid";
 
@@ -67,7 +68,11 @@ const WHEEL_THRESHOLD = 30;
 // new scene can't start before the previous one settles.
 const TRANSITION_LOCK_MS = 900;
 
-export function SceneController() {
+interface SceneControllerProps {
+  carouselRepos: CarouselRepo[];
+}
+
+export function SceneController({ carouselRepos }: SceneControllerProps) {
   const [scene, setScene] = useState(0);
   const transitionLockRef = useRef(false);
 
@@ -168,7 +173,7 @@ export function SceneController() {
         <SkillsGrid />
       </Scene>
       <Scene index={3} currentScene={scene}>
-        <ProjectsScene />
+        <ProjectsScene repos={carouselRepos} />
       </Scene>
       {/* Scene 4 — ContactForm. No earth-safe padding: the globe fades out
           on this scene (see EarthBackdrop), so we reclaim that space for

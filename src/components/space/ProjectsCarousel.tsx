@@ -3,61 +3,72 @@
 import Image from "next/image";
 import { useState } from "react";
 
+import type { Database } from "@/types/database";
+import { safeRepoHref } from "@/lib/safe-url";
+
 /**
  * Scene 3 projects carousel. Replaces the invite card after the user clicks
  * "Ver projetos". Two arrow buttons cycle through the project list with
  * wrap-around; the card content is wrapped in `aria-live="polite"` so screen
  * readers announce each project as the index changes.
  *
+ * Data flow: repos are fetched in `src/app/page.tsx` (RSC) from the `repos`
+ * Supabase table and handed down through SceneController → ProjectsScene.
+ * `stack` and `description_ai` come from the README-driven sync — the carousel
+ * holds no hardcoded project data.
+ *
  * Loose coupling: the parent `ProjectsScene` owns the view toggle; this
  * component only owns the current index.
  */
 
-type Project = { title: string; description: string; stack: string[]; href?: string };
+type RepoRow = Database["public"]["Tables"]["repos"]["Row"];
+// Minimal surface the carousel consumes. Keeping it narrower than the full
+// Row makes it cheap to mock and makes it obvious which fields cross the
+// RSC → Client boundary.
+export type CarouselRepo = Pick<RepoRow, "github_id" | "name" | "description_ai" | "stack" | "url">;
 
-// TODO(user): confirmar descrição e stack de `doctalk` (URL já configurada).
-//             Se `doctalk` tiver demo pública, trocar o href do GitHub pela URL da demo.
-const PROJECTS: Project[] = [
-  {
-    title: "proposal-ai",
-    description:
-      "Gerador de propostas comerciais com IA — integra Groq para redação e Postgres para persistência.",
-    stack: ["React", "Express", "Groq", "Postgres", "Docker"],
-    href: "https://github.com/mateushr23/proposal-ai",
-  },
-  {
-    title: "task-agent",
-    description:
-      "Agente de automação de tarefas com IA — usa Groq para raciocínio, DuckDuckGo para busca e SSE para streaming.",
-    stack: ["Node.js", "Groq", "DuckDuckGo", "SSE"],
-    href: "https://github.com/mateushr23/task-agent",
-  },
-  {
-    title: "doctalk",
-    // TODO(user): substituir pela descrição real do projeto
-    description: "Placeholder — aguardando descrição do projeto.",
-    // TODO(user): confirmar stack real
-    stack: ["TBD"],
-    href: "https://github.com/mateushr23/doctalk",
-  },
-];
+interface ProjectsCarouselProps {
+  repos: CarouselRepo[];
+}
 
-export function ProjectsCarousel() {
+// Short, editorial. Matches IndexRow's fallback convention ("descrição em
+// breve") without the leading stack blurb — the stack row hides on empty,
+// so a description-only placeholder reads cleanly on its own.
+const EMPTY_DESCRIPTION = "Descrição em breve.";
+const EMPTY_LIST_COPY = "Projetos em curadoria — volte em breve.";
+
+export function ProjectsCarousel({ repos }: ProjectsCarouselProps) {
   const [index, setIndex] = useState(0);
 
-  const total = PROJECTS.length;
+  const total = repos.length;
   const prev = () => setIndex((i) => Math.max(0, i - 1));
   const next = () => setIndex((i) => Math.min(total - 1, i + 1));
 
-  const current = PROJECTS[index];
+  if (total === 0) {
+    return (
+      <div className="flex w-full max-w-container items-center justify-center">
+        <p className="mono text-message uppercase tracking-widest text-(--color-accent)/70">
+          {EMPTY_LIST_COPY}
+        </p>
+      </div>
+    );
+  }
+
+  // Clamp the index defensively — if the repos prop shrinks between
+  // renders, `repos[index]` could otherwise be undefined.
+  const safeIndex = Math.min(index, total - 1);
+  const current = repos[safeIndex];
+  const description = current.description_ai ?? EMPTY_DESCRIPTION;
+  const stack = current.stack ?? [];
+  const href = safeRepoHref(current.url);
 
   return (
     <div className="relative flex w-full max-w-container items-center justify-center gap-6 md:gap-10">
       <button
         type="button"
         onClick={prev}
-        disabled={index === 0}
-        aria-disabled={index === 0}
+        disabled={safeIndex === 0}
+        aria-disabled={safeIndex === 0}
         aria-label="Projeto anterior"
         className="shrink-0 opacity-80 transition-opacity hover:opacity-100 focus-visible:opacity-100 disabled:opacity-30 disabled:cursor-not-allowed"
       >
@@ -76,12 +87,12 @@ export function ProjectsCarousel() {
         className="flex min-w-0 flex-1 flex-col items-center gap-5 text-center"
       >
         {/*
-          `key={index}` remounts the card on each index change so the
+          `key={safeIndex}` remounts the card on each index change so the
           `reveal` entrance animation restarts and the new project visibly
           fades in — no useEffect plumbing needed.
         */}
         <div
-          key={index}
+          key={safeIndex}
           className="reveal flex flex-col items-center gap-5"
           style={{ ["--reveal-i" as string]: 0 }}
         >
@@ -89,43 +100,45 @@ export function ProjectsCarousel() {
             aria-hidden="true"
             className="mono text-message uppercase tracking-widest text-(--color-accent)/60"
           >
-            {String(index + 1).padStart(2, "0")} / {String(total).padStart(2, "0")}
+            {String(safeIndex + 1).padStart(2, "0")} / {String(total).padStart(2, "0")}
           </p>
           <h3 className="text-balance font-display text-name font-semibold uppercase leading-tight tracking-[0.025em] text-(--color-accent)">
-            {current.href ? (
+            {href ? (
               <a
-                href={current.href}
+                href={href}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-(--color-accent) transition-colors hover:text-accent-bright"
               >
-                {current.title}
+                {current.name}
               </a>
             ) : (
-              current.title
+              current.name
             )}
           </h3>
           <p className="max-w-[48ch] text-(length:--text-body) leading-relaxed text-(--color-accent)">
-            {current.description}
+            {description}
           </p>
-          <ul className="flex flex-wrap items-center justify-center gap-2">
-            {current.stack.map((tech) => (
-              <li
-                key={tech}
-                className="glow-stroke border border-border px-4 py-2 text-click uppercase tracking-[0.04em] text-(--color-accent)"
-              >
-                {tech}
-              </li>
-            ))}
-          </ul>
+          {stack.length > 0 ? (
+            <ul className="flex flex-wrap items-center justify-center gap-2">
+              {stack.map((tech) => (
+                <li
+                  key={tech}
+                  className="glow-stroke border border-border px-4 py-2 text-click uppercase tracking-[0.04em] text-(--color-accent)"
+                >
+                  {tech}
+                </li>
+              ))}
+            </ul>
+          ) : null}
         </div>
       </div>
 
       <button
         type="button"
         onClick={next}
-        disabled={index === total - 1}
-        aria-disabled={index === total - 1}
+        disabled={safeIndex === total - 1}
+        aria-disabled={safeIndex === total - 1}
         aria-label="Próximo projeto"
         className="shrink-0 opacity-80 transition-opacity hover:opacity-100 focus-visible:opacity-100 disabled:opacity-30 disabled:cursor-not-allowed"
       >
