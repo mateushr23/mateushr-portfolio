@@ -11,7 +11,8 @@ export type Database = {
       repos: {
         Row: {
           created_at: string;
-          description_ai: string | null;
+          description_en: string | null;
+          description_pt: string | null;
           github_id: number;
           id: string;
           is_featured: boolean;
@@ -27,7 +28,8 @@ export type Database = {
         };
         Insert: {
           created_at?: string;
-          description_ai?: string | null;
+          description_en?: string | null;
+          description_pt?: string | null;
           github_id: number;
           id?: string;
           is_featured?: boolean;
@@ -43,7 +45,8 @@ export type Database = {
         };
         Update: {
           created_at?: string;
-          description_ai?: string | null;
+          description_en?: string | null;
+          description_pt?: string | null;
           github_id?: number;
           id?: string;
           is_featured?: boolean;
