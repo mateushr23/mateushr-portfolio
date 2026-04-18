@@ -126,7 +126,18 @@ function parseDescription(lines: string[]): string | null {
 
 /**
  * Extract the EN description from the slice of lines that starts with
- * `## English`. Preferred shape is:
+ * `## English`.
+ *
+ * Primary shape (current README convention):
+ *
+ *   ## English
+ *
+ *   <first paragraph>
+ *
+ *   ### Features
+ *   - ...
+ *
+ * Legacy shape (fallback only):
  *
  *   ## English
  *
@@ -134,45 +145,67 @@ function parseDescription(lines: string[]): string | null {
  *
  *   <first paragraph>
  *
- * Fallback: if no `###` heading is present under `## English`, the first
- * non-empty, non-heading line starts the paragraph. Returns null when the
- * block is empty or no paragraph can be captured.
+ * The primary path captures the paragraph sitting between `## English`
+ * and the next heading at any level. The `### <ProjectName>` subheading
+ * scan is preserved verbatim as a fallback for legacy READMEs that
+ * started the EN block with a project subheading and no leading
+ * paragraph. Returns null when neither path yields a paragraph.
  */
 function parseEnglishDescription(enLines: string[]): string | null {
   if (enLines.length === 0) return null;
 
-  // Skip the `## English` heading itself. The regex search is bounded to
-  // the first 8 lines after the heading so a malformed README cannot
-  // force a long scan.
+  // --- Primary path: paragraph between `## English` and the next heading.
+  // Skip the `## English` heading itself.
   let i = 1;
-  const scanLimit = Math.min(enLines.length, i + 8);
+  // Skip blank lines between the heading and the first paragraph line.
+  while (i < enLines.length && enLines[i].trim() === "") i++;
+
+  const primaryParagraph: string[] = [];
+  while (i < enLines.length) {
+    const line = enLines[i];
+    const trimmed = line.trim();
+    // Stop at next heading (any level) or blank line terminating the paragraph.
+    if (trimmed === "" || /^#{1,6}\s/.test(trimmed)) break;
+    primaryParagraph.push(trimmed);
+    i++;
+  }
+
+  if (primaryParagraph.length > 0) {
+    return joinParagraph(primaryParagraph);
+  }
+
+  // --- Fallback path (legacy): `### <ProjectName>` subheading scan.
+  // The regex search is bounded to the first 8 lines after the heading
+  // so a malformed README cannot force a long scan.
+  let j = 1;
+  const scanLimit = Math.min(enLines.length, j + 8);
   let subheadingIndex = -1;
-  for (let j = i; j < scanLimit; j++) {
-    if (/^###\s+\S/.test(enLines[j])) {
-      subheadingIndex = j;
+  for (let k = j; k < scanLimit; k++) {
+    if (/^###\s+\S/.test(enLines[k])) {
+      subheadingIndex = k;
       break;
     }
   }
 
   if (subheadingIndex !== -1) {
-    i = subheadingIndex + 1;
+    j = subheadingIndex + 1;
   }
 
   // Skip blank lines between the anchor (### heading or ## English) and
   // the first paragraph line.
-  while (i < enLines.length && enLines[i].trim() === "") i++;
+  while (j < enLines.length && enLines[j].trim() === "") j++;
 
-  const paragraph: string[] = [];
-  while (i < enLines.length) {
-    const line = enLines[i];
+  const fallbackParagraph: string[] = [];
+  while (j < enLines.length) {
+    const line = enLines[j];
     const trimmed = line.trim();
     // Stop at next heading or blank line terminating the paragraph.
     if (trimmed === "" || /^#{1,6}\s/.test(trimmed)) break;
-    paragraph.push(trimmed);
-    i++;
+    fallbackParagraph.push(trimmed);
+    j++;
   }
 
-  return joinParagraph(paragraph);
+  return joinParagraph(fallbackParagraph);
 }
 
 /**

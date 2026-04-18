@@ -1,0 +1,61 @@
+{
+  "stage": "6-parser-fix-qa",
+  "verdict": "PASS",
+  "gates": {
+    "tsc": "pass",
+    "eslint": "pass",
+    "build": "pass",
+    "sync_smoke": "pass — 3/4 repos got non-null description_en; mateushr-portfolio correctly null (monolingual README)"
+  },
+  "behavioral_checks": [
+    { "case": "monolingual README", "expected": "description_en=null", "verified": true },
+    {
+      "case": "bilingual shape: ## English → para → ### Features",
+      "expected": "captures para",
+      "verified": true
+    },
+    {
+      "case": "bilingual legacy: ## English → ### Name → para",
+      "expected": "captures para via fallback",
+      "verified": true
+    },
+    {
+      "case": "## English immediately followed by another heading",
+      "expected": "null",
+      "verified": true
+    },
+    {
+      "case": "paragraph exceeds MAX_DESCRIPTION_LENGTH",
+      "expected": "truncated via joinParagraph",
+      "verified": true
+    }
+  ],
+  "findings": [],
+  "ready_for_review": true,
+  "notes": {
+    "diff_stat": "2 files changed, 56 insertions(+), 20 deletions(-)",
+    "parser_version_location": "local const inside computeSourceHash (sync.ts:36); appended via `|v${PARSER_VERSION}` at end of joined payload (sync.ts:44). Not reassigned anywhere.",
+    "parse_english_description_flow": "Primary path captures paragraph between `## English` and next `/^#{1,6}\\s/` heading or blank line; returns early via joinParagraph when non-empty. Fallback (legacy `### <ProjectName>` scan, bounded to 8 lines) runs only when primary yields nothing. No double-return, no unreachable code.",
+    "join_paragraph_shared": "joinParagraph is the single truth for length cap (500) + whitespace collapse; called from both parseDescription (PT) and parseEnglishDescription (EN primary + fallback).",
+    "regression_guard": {
+      "parseEnglishDescription_callers": [
+        "src/lib/sync/readme.ts:83 (internal only — signature unchanged)"
+      ],
+      "computeSourceHash_callers": ["src/lib/sync/sync.ts:126 (sole call site)"],
+      "source_hash_consumers": [
+        "src/lib/sync/sync.ts (own writer/reader)",
+        "src/app/admin/page.tsx:34 (display-only SELECT projection)",
+        "src/types/database.ts (generated types)",
+        "supabase/migrations/20260416205325_add_source_hash.sql (column definition)"
+      ],
+      "external_dependency_on_hash_format": "none — hash is opaque to consumers; format bump is safe"
+    },
+    "sanity": {
+      "parseDescription_pt_unchanged": true,
+      "parseStack_unchanged": true,
+      "ReadmeExtraction_shape_unchanged": true,
+      "new_imports_or_exports": false,
+      "console_log_left_in_sync_module": false
+    }
+  }
+}

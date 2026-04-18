@@ -31,14 +31,18 @@ export type SyncCounters = {
  * schedules re-extraction.
  */
 function computeSourceHash(repo: NormalizedRepo, readmeSha: string | null): string {
+  // Hash invalidation knob: bump when parser logic changes so every row
+  // re-extracts exactly once on the next sync.
+  const PARSER_VERSION = "2";
   const topicsCsv = [...repo.topics].sort().join(",");
-  const payload = [
-    repo.name,
-    repo.description_gh ?? "",
-    topicsCsv,
-    repo.language ?? "",
-    readmeSha ?? "no-readme",
-  ].join("|");
+  const payload =
+    [
+      repo.name,
+      repo.description_gh ?? "",
+      topicsCsv,
+      repo.language ?? "",
+      readmeSha ?? "no-readme",
+    ].join("|") + `|v${PARSER_VERSION}`;
 
   return createHash("sha256").update(payload).digest("hex");
 }
