@@ -32,18 +32,6 @@ npm run dev
 
 Abra [http://localhost:3000](http://localhost:3000).
 
-### Variáveis de ambiente
-
-| Variável                               | Obrigatória | Descrição                                                     |
-| -------------------------------------- | ----------- | ------------------------------------------------------------- |
-| `NEXT_PUBLIC_SUPABASE_URL`             | Sim         | URL do projeto Supabase                                       |
-| `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | Sim         | Chave pública (anon) do Supabase                              |
-| `SUPABASE_SERVICE_ROLE_KEY`            | Sim         | Service role usada no sync e no admin                         |
-| `GITHUB_TOKEN`                         | Sim         | Token do GitHub para chamadas Octokit                         |
-| `GITHUB_USERNAME`                      | Sim         | Usuário cujos repos públicos serão listados                   |
-| `CRON_SECRET`                          | Sim         | Segredo que autoriza o endpoint de sync                       |
-| `SUPABASE_ADMIN_ALLOWLIST`             | Sim         | Lista de e-mails autorizados no admin (separados por vírgula) |
-
 ## Estrutura
 
 ```text
@@ -91,18 +79,6 @@ npm run dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000).
-
-#### Environment Variables
-
-| Variable                               | Required | Description                              |
-| -------------------------------------- | -------- | ---------------------------------------- |
-| `NEXT_PUBLIC_SUPABASE_URL`             | Yes      | Supabase project URL                     |
-| `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | Yes      | Supabase public (anon) key               |
-| `SUPABASE_SERVICE_ROLE_KEY`            | Yes      | Service role used by sync and admin      |
-| `GITHUB_TOKEN`                         | Yes      | GitHub token for Octokit calls           |
-| `GITHUB_USERNAME`                      | Yes      | User whose public repos are listed       |
-| `CRON_SECRET`                          | Yes      | Secret that authorizes the sync endpoint |
-| `SUPABASE_ADMIN_ALLOWLIST`             | Yes      | Comma-separated list of admin emails     |
 
 ### Project Structure
 
