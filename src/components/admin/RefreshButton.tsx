@@ -71,7 +71,7 @@ export function RefreshButton({ action }: RefreshButtonProps) {
   const toneClass = (() => {
     if (phase === "success") return "text-[color:var(--color-success)]";
     if (phase === "error") return "text-[color:var(--color-danger)]";
-    return "text-text";
+    return "text-[color:var(--color-accent)]";
   })();
 
   return (
@@ -81,7 +81,7 @@ export function RefreshButton({ action }: RefreshButtonProps) {
         onClick={handleClick}
         disabled={busy}
         aria-busy={busy}
-        className={`inline-flex items-center gap-2 border-l-2 border-accent py-3 pl-3 pr-1 font-mono text-sm transition-colors duration-200 hover:text-accent disabled:cursor-wait ${toneClass}`}
+        className={`label inline-flex items-center gap-3 border-l-2 border-(--color-accent) py-3 pl-3 pr-1 text-message uppercase tracking-[0.08em] transition-colors duration-200 hover:text-accent-bright disabled:cursor-wait ${toneClass}`}
       >
         <span aria-hidden="true" className="refresh-glyph" data-busy={busy ? "true" : "false"}>
           ↻

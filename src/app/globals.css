@@ -1,57 +1,101 @@
 @import "tailwindcss";
 
-@theme {
-  /* Colors — editorial dark, warm off-black with amber accent */
-  --color-primary: #0b0b0c;
-  --color-surface: #121214;
-  --color-surface-elevated: #17171a;
-  --color-text: #edeae3;
-  --color-text-muted: #8a857a;
-  --color-text-dim: #53504a;
-  --color-accent: #e8a44c;
-  --color-accent-muted: #a87534;
-  --color-border: #26252a;
-  --color-border-strong: #36343b;
+/* Root-level defaults for runtime-driven CSS custom properties.
+ * --earth-rotation is written by SceneController (client) on scene change
+ * and consumed by EarthBackdrop's inner rotation wrapper. A sane default
+ * here means the globe renders upright during SSR / before hydration. */
+:root {
+  --earth-rotation: 0deg;
+}
 
-  /* Stage 4 admin tokens — sage/terracotta are role-specific so they stay
-   * outside the core editorial palette. surface-admin is a half-step
-   * between primary and surface used only as the admin row hover band. */
+/* Route-scoped scroll lock — opt-in via <LockScroll /> Client Component.
+ * Applied on <html> AND <body> because either can be the scroll container
+ * depending on framework chrome. Other routes (e.g. /admin) stay scrollable. */
+html.no-scroll,
+body.no-scroll {
+  overflow: hidden;
+  height: 100dvh;
+  overscroll-behavior: none;
+}
+
+@theme {
+  /* Colors — cold space (home redesign stage 5). Amber retired.
+   * NOTE: --color-bg / --color-bg-deep intentionally set to pure #000000
+   * (overrides taste-skill "no pure black" rule per explicit user request)
+   * so the seam between the earth PNG's #000000 negative space and the
+   * page background disappears. Both tokens are kept as separate names
+   * because downstream components may reference them. */
+  --color-bg: #000000;
+  --color-bg-deep: #000000;
+  --color-surface: #0f0b1a;
+  --color-surface-elevated: #17131f;
+  --color-text: #edeaf5;
+  --color-text-muted: #8a82a8;
+  --color-text-dim: #4a4560;
+  --color-accent: #ceb7ff;
+  --color-accent-bright: #e4d6ff;
+  --color-accent-glow: rgba(179, 119, 255, 0.55);
+  --color-accent-halo: rgba(206, 183, 255, 0.18);
+  --color-border: #2a2240;
+  --color-border-strong: #3b3158;
+  --color-star-1: #ffffff;
+  --color-star-2: #ceb7ff;
+  --color-star-3: #8a82a8;
+
+  /* Admin surface tokens — kept so the /admin subtree still renders
+   * consistently. Sage/terracotta are role-specific and unchanged. */
   --color-success: #6b8f71;
   --color-danger: #c96e5a;
   --color-surface-admin: #101012;
 
   /* Fonts — bound to next/font CSS variables set on <html> */
-  --font-display: var(--font-fraunces);
+  --font-display: var(--font-orbitron);
   --font-sans: var(--font-geist);
   --font-mono: var(--font-jetbrains-mono);
+  --font-label: var(--font-bebas-neue);
+  --font-serif: var(--font-fraunces);
 
-  /*
-   * Type scale.
-   * NOTE: --text-display-xl intentionally tightened from the handoff's
-   * max of 7.5rem to 6rem. The user shortened the headline copy to two
-   * lines — "Da ideia ao usuário." (line 1) vs "Engenharia com visão de
-   * produto." (line 2). At 7.5rem the word "usuário" hangs alone in empty
-   * space on large viewports, creating an awkward stair-step. 6rem keeps
-   * the hero commanding at 1440px while preventing orphaned tokens on
-   * line 1. The fluid floor (3.5rem) and slope (8vw + 1rem) are preserved.
-   * Chose 6rem over 5.5rem because the visible length ratio between line 1
-   * and line 2 is character-driven, not size-driven — shrinking further
-   * only makes the hero feel less confident without fixing the stair-step.
-   */
+  /* Type scale — space home */
+  --text-hero: clamp(1.75rem, 3vw + 0.75rem, 3.25rem);
+  --text-name: clamp(1.65rem, 3.2vw + 0.5rem, 3rem);
+  --text-message: clamp(0.75rem, 0.5vw + 0.5rem, 1.125rem);
+  --text-corner: clamp(1.15rem, 1.5vw + 0.4rem, 2rem);
+  --text-anchor: clamp(1rem, 1.25vw + 0.4rem, 1.75rem);
+  --text-click: clamp(1rem, 1.5vw + 0.4rem, 1.625rem);
+
+  /* Legacy (admin) scale kept so /admin surfaces still compile */
   --text-display-xl: clamp(3.5rem, 8vw + 1rem, 6rem);
   --text-display: clamp(2.5rem, 5vw + 1rem, 5rem);
   --text-h1: clamp(2rem, 3vw + 1rem, 3.25rem);
   --text-h2: clamp(1.5rem, 2vw + 0.75rem, 2.25rem);
 
   /* Container */
-  --spacing-container: 1100px;
-  /* Tailwind v4 registers `--container-*` tokens as `max-w-*` utilities.
-   * This enables `max-w-container` across headers, hero, index, footer,
-   * and admin surfaces — replacing literal `max-w-[1100px]` duplicates. */
-  --container-container: 1100px;
+  --spacing-container: 1440px;
+  --container-container: 1440px;
+
+  /* Earth backdrop geometry — deterministic reserved zone so headline /
+   * name / CTAs never overlap the earth image at any viewport size.
+   * - --earth-size: rendered square edge (responsive, capped).
+   * - --earth-hidden-ratio: fraction of the square that hangs below the
+   *   viewport bottom (the unseen "south hemisphere"). 0.68 → only the
+   *   top ~32% peeks into the viewport (was 0.55 → 45%); this gives the
+   *   "more peek, less face" framing while keeping the text-safe zone
+   *   derived from the same token so the no-overlap invariant holds.
+   * - --earth-visible: vertical space the earth's visible cap occupies
+   *   inside the viewport. Main content reserves this as padding-bottom. */
+  --earth-size: min(108vw, 1280px);
+  --earth-hidden-ratio: 0.68;
+  --earth-visible: calc(var(--earth-size) * (1 - var(--earth-hidden-ratio)));
+  --earth-safe-gap: 2rem;
+  /* Reserved strip above --earth-visible that holds PRESS / SCROLL anchors.
+   * Measured generously: label (~2.25rem) + gap (0.75rem) + icon (3rem) + a
+   * little breathing room. Consumed by <main> padding-bottom so NavCTAs
+   * never bump into the anchors either. */
+  --home-anchors-strip: 7rem;
 
   /* Easing */
   --ease-out-expo: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --ease-float: cubic-bezier(0.45, 0, 0.55, 1);
 }
 
 /* Base layer */
@@ -62,15 +106,15 @@
   }
 
   body {
-    background: var(--color-primary);
+    background: var(--color-bg);
     color: var(--color-text);
     font-family: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
-    font-feature-settings: "ss01", "cv11";
     -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
   }
 
   ::selection {
-    background: rgba(232, 164, 76, 0.25);
+    background: var(--color-accent-halo);
     color: var(--color-text);
   }
 
@@ -85,49 +129,76 @@
   }
 
   h1,
-  h2,
+  h2 {
+    font-family: var(--font-display), ui-sans-serif, system-ui, sans-serif;
+    letter-spacing: 0.02em;
+  }
+
   h3 {
-    font-family: var(--font-display), ui-serif, Georgia, serif;
-    letter-spacing: -0.035em;
-    line-height: 0.95;
-    font-variation-settings: "opsz" 144;
+    font-family: var(--font-display), ui-sans-serif, system-ui, sans-serif;
+    letter-spacing: 0.02em;
   }
 
-  em {
-    font-style: italic;
-    font-variation-settings: "opsz" 144;
-  }
-
-  /*
-   * WONK swash — reserved for the single signature word "produto" in the
-   * hero headline (see handoffs/stage-3-home-design.json:
-   * typography.scale_rules.hanging_italic_swash & copy.hero_headline_wonky_word).
-   * Applied via <em class="wonk">produto</em>. All other <em> get italic
-   * + opsz only, keeping WONK as a deliberate, singular tonal hit.
-   */
-  em.wonk,
-  .wonk {
-    font-variation-settings:
-      "opsz" 144,
-      "WONK" 1;
-  }
-
-  .eyebrow {
-    font-family: var(--font-mono), ui-monospace, monospace;
-    font-size: 0.8125rem;
+  .label {
+    font-family: var(--font-label), "Bebas Neue", Impact, sans-serif;
     letter-spacing: 0.04em;
     text-transform: uppercase;
-    color: var(--color-text-muted);
+  }
+
+  .mono {
+    font-family: var(--font-mono), ui-monospace, monospace;
+  }
+
+  /* Tailwind 4's Preflight removed `cursor: pointer` from native buttons
+   * (now matches browser default of `cursor: default`). Restore the pointer
+   * for enabled buttons and scripted [role="button"] elements. Anchors keep
+   * the browser default. `:not(:disabled)` / `:not([aria-disabled="true"])`
+   * preserves the correct cursor on disabled controls. */
+  button:not(:disabled),
+  [role="button"]:not([aria-disabled="true"]) {
+    cursor: pointer;
   }
 }
 
-/* Skip link — hidden until focused */
+/* Earth backdrop — viewport-height-responsive sizing. On short viewports
+ * shrink the earth so the text-safe zone stays roomy; hide entirely on
+ * landscape phones where every vertical pixel counts. Width cap at very
+ * large viewports keeps the globe from ballooning past 900px. */
+@media (max-height: 900px) {
+  :root {
+    --earth-size: min(98vw, 720px);
+  }
+}
+@media (max-height: 700px) {
+  :root {
+    --earth-size: min(92vw, 465px);
+    --earth-safe-gap: 1rem;
+    --home-anchors-strip: 5rem;
+  }
+  /* Reclaim top breathing room on short viewports so the content column
+   * (headline + name + CTAs) still fits above the earth-safe zone. */
+  main#main {
+    padding-top: 3rem !important;
+  }
+}
+@media (max-height: 500px) {
+  :root {
+    --earth-visible: 0px;
+    --earth-safe-gap: 0.5rem;
+    --home-anchors-strip: 4rem;
+  }
+  .earth-backdrop {
+    display: none !important;
+  }
+}
+
+/* Skip link — hidden until focused (a11y baseline) */
 .skip-link {
   position: absolute;
   top: 8px;
   left: 8px;
   padding: 8px 12px;
-  background: var(--color-surface-elevated);
+  background: var(--color-surface);
   color: var(--color-text);
   font-family: var(--font-mono), ui-monospace, monospace;
   font-size: 0.8125rem;
@@ -138,69 +209,160 @@
 }
 .skip-link:focus-visible {
   transform: translateY(0);
+  outline: 2px solid var(--color-accent);
+  outline-offset: 3px;
 }
 
-/* Staggered reveal — pure CSS, no JS */
-@keyframes reveal-up {
+/* Signature glow — used on I AM MATEUS and CLICK boxes only */
+.glow-stroke {
+  -webkit-text-stroke: 2px var(--color-accent);
+  color: transparent;
+  text-shadow: 0 0 5px var(--color-accent-glow);
+}
+
+/* Starfield wrapper — canvas lives inside; soft high-horizon nebula overlay.
+ * Centered high on the viewport (15%) and pulled in (end stop 40%) so the
+ * gradient fully resolves to #000000 by y≈55% — keeps the earth zone at the
+ * bottom seamless with the image's transparent background. */
+.starfield {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background: radial-gradient(ellipse 80% 40% at 50% 15%, #14102a 0%, #000000 40%);
+}
+
+/* Motion — all transform/opacity only */
+@keyframes float-slow {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-6px);
+  }
+}
+@keyframes pulse-glow {
+  0%,
+  100% {
+    text-shadow: 0 0 5px var(--color-accent-glow);
+  }
+  50% {
+    text-shadow:
+      0 0 12px var(--color-accent-glow),
+      0 0 24px var(--color-accent-halo);
+  }
+}
+@keyframes scroll-bounce {
+  0%,
+  100% {
+    transform: translateY(0);
+    opacity: 1;
+  }
+  50% {
+    transform: translateY(6px);
+    opacity: 0.6;
+  }
+}
+@keyframes fade-up {
   from {
     opacity: 0;
-    transform: translateY(8px);
+    transform: translateY(12px);
   }
   to {
     opacity: 1;
     transform: translateY(0);
   }
 }
+
 .reveal {
-  animation: reveal-up 420ms var(--ease-out-expo) both;
-  animation-delay: calc(var(--reveal-i, 0) * 80ms);
+  animation: fade-up 600ms var(--ease-out-expo) both;
+  animation-delay: calc(var(--reveal-i, 0) * 120ms);
+}
+.float-slow {
+  animation: float-slow 6s var(--ease-float) infinite;
+}
+.pulse-glow {
+  animation: pulse-glow 4s var(--ease-float) infinite;
+}
+.scroll-bounce {
+  animation: scroll-bounce 1.6s var(--ease-float) infinite;
 }
 
-/* Index row hover underline — amber line grows left-to-right */
-.name-link {
-  background-image: linear-gradient(var(--color-accent), var(--color-accent));
-  background-size: 0% 1px;
-  background-repeat: no-repeat;
-  background-position: 0 100%;
-  transition: background-size 220ms var(--ease-out-expo);
+/* SocialRail exit-left / enter-bottom phase animations.
+ * Driven by the phase machine in SocialRail.tsx. Icons translate off the
+ * LEFT edge of the viewport (-120vw guarantees off-screen at any width),
+ * then rise back up from below into their new rest slot. `forwards` fill
+ * retains the final frame so the invisible moment between exit-end and
+ * enter-start stays at opacity 0 (no flash). */
+@keyframes sr-exit-left {
+  from {
+    transform: translate(0, 0);
+    opacity: 1;
+  }
+  to {
+    transform: translate(-120vw, 0);
+    opacity: 0;
+  }
 }
-.index-row:hover .name-link,
-.index-row:focus-visible .name-link {
-  background-size: 100% 1px;
+@keyframes sr-enter-bottom {
+  from {
+    transform: translate(0, 3rem);
+    opacity: 0;
+  }
+  to {
+    transform: translate(0, 0);
+    opacity: 1;
+  }
+}
+.sr-phase-exit {
+  animation: sr-exit-left 700ms ease-in-out forwards;
+}
+.sr-phase-enter {
+  animation: sr-enter-bottom 700ms ease-out forwards;
+}
+@media (prefers-reduced-motion: reduce) {
+  .sr-phase-exit,
+  .sr-phase-enter {
+    animation: none;
+  }
 }
 
-/* Index row arrow glyph — slides right on hover */
-.index-arrow {
-  display: inline-block;
-  transition: transform 220ms var(--ease-out-expo);
+/* HomeAnchors PRESS ↔ SCROLL glyph swap phase animations.
+ * Driven by the phase machine in HomeAnchors.tsx. The outgoing glyph
+ * floats up + fades out; the incoming glyph rises from below + fades in.
+ * `forwards` fill keeps the invisible mid-swap frame at opacity 0. */
+@keyframes anchor-glyph-exit {
+  from {
+    transform: translateY(0);
+    opacity: 1;
+  }
+  to {
+    transform: translateY(-0.75rem);
+    opacity: 0;
+  }
 }
-.index-row:hover .index-arrow,
-.index-row:focus-visible .index-arrow {
-  transform: translateX(4px);
+@keyframes anchor-glyph-enter {
+  from {
+    transform: translateY(0.75rem);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
 }
-
-/* Index row number — shifts to accent on hover */
-.index-num {
-  color: var(--color-text-dim);
-  transition: color 220ms var(--ease-out-expo);
+.anchor-glyph-exit {
+  animation: anchor-glyph-exit 300ms ease-in forwards;
 }
-.index-row:hover .index-num,
-.index-row:focus-visible .index-num {
-  color: var(--color-accent);
+.anchor-glyph-enter {
+  animation: anchor-glyph-enter 400ms ease-out forwards;
 }
-
-/* Header — backdrop blur and border appear only when scrolled past the sentinel */
-.site-header {
-  transition:
-    background-color 220ms var(--ease-out-expo),
-    border-color 220ms var(--ease-out-expo),
-    backdrop-filter 220ms var(--ease-out-expo);
-}
-.site-header[data-scrolled="true"] {
-  background-color: rgba(11, 11, 12, 0.72);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border-bottom-color: var(--color-border);
+@media (prefers-reduced-motion: reduce) {
+  .anchor-glyph-exit,
+  .anchor-glyph-enter {
+    animation: none;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -212,13 +374,20 @@
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
   }
-  .name-link {
-    transition: none;
+  .starfield canvas {
+    display: none;
   }
-  .index-arrow {
-    transition: none;
+  .starfield {
+    background-image:
+      radial-gradient(1px 1px at 20% 30%, #ffffff 50%, transparent 100%),
+      radial-gradient(1px 1px at 70% 15%, #ceb7ff 50%, transparent 100%),
+      radial-gradient(1.5px 1.5px at 45% 80%, #ffffff 50%, transparent 100%),
+      radial-gradient(1px 1px at 85% 60%, #8a82a8 50%, transparent 100%),
+      radial-gradient(ellipse 80% 40% at 50% 15%, #14102a 0%, #000000 40%);
   }
 }
+
+/* --- Admin-only utilities (untouched from stage 4) --------------------- */
 
 /* Admin refresh button spinner — only runs while aria-busy=true. */
 @keyframes spin {
@@ -234,19 +403,13 @@
   display: inline-block;
 }
 
-/* Toggle switch — hand-rolled from native checkbox + label-as-track.
- *
- * Semantics come from the native <input type="checkbox"> (checked, space
- * toggles, form-submit works). The visual track is the wrapping <label>,
- * and the thumb is a ::before pseudo-element on the same label. We proxy
- * focus styles from the sr-only input to the label via :has(:focus-visible)
- * so the visible track shows the global focus ring. */
+/* Toggle switch — hand-rolled from native checkbox + label-as-track. */
 .toggle-switch {
   position: relative;
   display: inline-flex;
   align-items: center;
   justify-content: flex-start;
-  padding: 0.5rem 0.125rem; /* py-2 px-1 — keeps hit area >= 44px tall */
+  padding: 0.5rem 0.125rem;
   cursor: pointer;
   user-select: none;
 }
@@ -288,20 +451,14 @@
     background-color 220ms var(--ease-out-expo),
     opacity 220ms var(--ease-out-expo);
 }
-
-/* Hover: stronger border, no thumb movement. */
 .toggle-switch:hover > input:not(:disabled) ~ .toggle-track {
   border-color: var(--color-border-strong);
 }
-
-/* Focus: proxy the focus ring from the hidden checkbox to the visual track. */
 .toggle-switch:has(input:focus-visible) .toggle-track {
   outline: 2px solid var(--color-accent);
   outline-offset: 3px;
   border-radius: 9999px;
 }
-
-/* ON state — base (sage, used by the hidden variant). */
 .toggle-switch > input:checked ~ .toggle-track {
   background-color: rgba(107, 143, 113, 0.2);
   border-color: var(--color-success);
@@ -310,23 +467,17 @@
   transform: translate(18px, -50%);
   background-color: var(--color-success);
 }
-
-/* ON state — featured variant (amber, matches public-site accent). */
 .toggle-switch[data-variant="featured"] > input:checked ~ .toggle-track {
-  background-color: rgba(232, 164, 76, 0.2);
+  background-color: rgba(206, 183, 255, 0.2);
   border-color: var(--color-accent);
 }
 .toggle-switch[data-variant="featured"] > input:checked ~ .toggle-track::before {
   background-color: var(--color-accent);
 }
-
-/* Disabled state. */
 .toggle-switch > input:disabled ~ .toggle-track {
   opacity: 0.5;
   cursor: not-allowed;
 }
-
-/* Loading (pending server action). Parent label sets data-pending="true". */
 @keyframes toggle-pulse {
   0%,
   100% {
@@ -340,7 +491,7 @@
   animation: toggle-pulse 900ms linear infinite;
 }
 .toggle-switch[data-pending="true"] .toggle-track {
-  border-color: rgba(232, 164, 76, 0.3);
+  border-color: rgba(206, 183, 255, 0.3);
 }
 
 @media (prefers-reduced-motion: reduce) {

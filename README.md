@@ -15,7 +15,7 @@ Personal portfolio for Mateus HR, targeting full-time CLT opportunities. Listing
 ```bash
 npm install
 cp .env.example .env.local
-# fill in the Supabase + Anthropic keys
+# fill in the Supabase + GitHub keys
 npm run dev
 ```
 

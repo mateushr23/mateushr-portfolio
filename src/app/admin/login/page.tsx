@@ -4,6 +4,7 @@ import { AdminHeader } from "@/components/admin/AdminHeader";
 import { AuthDeniedBanner } from "@/components/admin/AuthDeniedBanner";
 import { MagicLinkConfirmation } from "@/components/admin/MagicLinkConfirmation";
 import { MagicLinkForm } from "@/components/admin/MagicLinkForm";
+import { Starfield } from "@/components/space/Starfield";
 
 import { requestMagicLink } from "./actions";
 
@@ -55,6 +56,7 @@ export default async function AdminLoginPage({ searchParams }: { searchParams: S
       <a href="#admin-main" className="skip-link">
         Pular para conteúdo
       </a>
+      <Starfield />
       <AdminHeader />
       <main
         id="admin-main"
@@ -67,9 +69,13 @@ export default async function AdminLoginPage({ searchParams }: { searchParams: S
             <>
               {denied ? <AuthDeniedBanner /> : null}
               <div className="flex flex-col gap-6">
-                <p className="eyebrow">ADMIN · ACESSO</p>
-                <h1 className="font-display text-h1 italic leading-[1.05] text-text">entrar</h1>
-                <p className="text-base leading-[1.65] text-text-muted">
+                <p className="mono text-message uppercase tracking-widest text-(--color-accent) opacity-70">
+                  ADMIN · ACESSO
+                </p>
+                <h1 className="font-display text-name font-bold uppercase leading-none tracking-[0.025em] text-(--color-accent)">
+                  entrar
+                </h1>
+                <p className="text-message leading-[1.65] text-(--color-accent)/80">
                   Digite seu e-mail. Se estiver autorizado, enviaremos um link de acesso válido por
                   10 minutos.
                 </p>

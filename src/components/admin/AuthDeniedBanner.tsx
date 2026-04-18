@@ -15,7 +15,7 @@ export function AuthDeniedBanner() {
       <div
         role="alert"
         tabIndex={-1}
-        className="mb-8 border-l-2 border-[color:var(--color-danger)] pl-4 font-mono text-sm text-[color:var(--color-danger)] focus:outline-none"
+        className="mono mb-8 border-l-2 border-danger pl-4 text-message text-danger focus:outline-none"
       >
         Este e-mail não tem permissão de acesso.
       </div>

@@ -11,7 +11,8 @@ export type Database = {
       repos: {
         Row: {
           created_at: string;
-          description_ai: string | null;
+          description_en: string | null;
+          description_pt: string | null;
           github_id: number;
           id: string;
           is_featured: boolean;
@@ -20,13 +21,15 @@ export type Database = {
           name: string;
           pushed_at: string;
           source_hash: string | null;
+          stack: string[];
           stars: number;
           updated_at: string;
           url: string;
         };
         Insert: {
           created_at?: string;
-          description_ai?: string | null;
+          description_en?: string | null;
+          description_pt?: string | null;
           github_id: number;
           id?: string;
           is_featured?: boolean;
@@ -35,13 +38,15 @@ export type Database = {
           name: string;
           pushed_at: string;
           source_hash?: string | null;
+          stack?: string[];
           stars?: number;
           updated_at?: string;
           url: string;
         };
         Update: {
           created_at?: string;
-          description_ai?: string | null;
+          description_en?: string | null;
+          description_pt?: string | null;
           github_id?: number;
           id?: string;
           is_featured?: boolean;
@@ -50,6 +55,7 @@ export type Database = {
           name?: string;
           pushed_at?: string;
           source_hash?: string | null;
+          stack?: string[];
           stars?: number;
           updated_at?: string;
           url?: string;

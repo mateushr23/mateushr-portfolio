@@ -3,7 +3,7 @@ import { Octokit } from "@octokit/rest";
 /**
  * Normalized shape consumed by the sync pipeline. Matches the subset of
  * GitHub fields we persist to Supabase, plus `topics` (used to compute
- * the source_hash and to feed the Claude describe step).
+ * the source_hash).
  */
 export type NormalizedRepo = {
   github_id: number;
@@ -21,7 +21,7 @@ export type NormalizedRepo = {
  * scope so that importing this file in a context without GITHUB_TOKEN
  * (e.g. a linter) does not throw.
  */
-function createOctokit(): Octokit {
+export function createOctokit(): Octokit {
   const token = process.env.GITHUB_TOKEN;
   if (!token) {
     throw new Error("Missing GITHUB_TOKEN env var.");
@@ -31,7 +31,9 @@ function createOctokit(): Octokit {
 
 /**
  * Fetch all public, owner-type, non-archived, non-fork repos for the
- * given GitHub username. Paginates until exhausted.
+ * given GitHub username. Paginates until exhausted. The caller-supplied
+ * Octokit is reused downstream (e.g. by the README extractor) so rate
+ * limit and auth context stay consistent across one sync run.
  *
  * Topics: the REST `listForUser` endpoint includes a `topics` field on
  * the full Repository response. When it is missing (some older Octokit
@@ -39,12 +41,13 @@ function createOctokit(): Octokit {
  * `listTopicsForRepo` per affected repo. For a portfolio of <50 repos
  * the extra requests are negligible.
  */
-export async function fetchPublicRepos(username: string): Promise<NormalizedRepo[]> {
+export async function fetchPublicRepos(
+  octokit: Octokit,
+  username: string
+): Promise<NormalizedRepo[]> {
   if (!username) {
     throw new Error("fetchPublicRepos: username is required.");
   }
-
-  const octokit = createOctokit();
 
   const rawRepos = await octokit.paginate(octokit.rest.repos.listForUser, {
     username,

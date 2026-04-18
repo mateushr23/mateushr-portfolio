@@ -19,41 +19,37 @@ interface AdminHeaderProps {
  */
 export function AdminHeader({ email }: AdminHeaderProps) {
   return (
-    <header
-      id="admin-header"
-      role="banner"
-      className="sticky top-0 z-40 border-b border-border bg-primary/90 backdrop-blur"
-    >
+    <header id="admin-header" role="banner" className="sticky top-0 z-40 border-b border-border">
       <div className="mx-auto flex h-16 max-w-container items-center justify-between px-5 md:px-12">
         <Link
           href="/"
           aria-label="mateushr — home"
-          className="flex items-baseline gap-2 font-mono text-sm text-text"
+          className="mono flex items-baseline gap-2 text-sm text-(--color-accent)"
         >
           <span className="inline-flex items-baseline">
             <span>mateushr</span>
-            <span aria-hidden="true" className="text-accent">
+            <span aria-hidden="true" className="text-accent-bright">
               .
             </span>
           </span>
-          <span aria-hidden="true" className="text-text-dim">
+          <span aria-hidden="true" className="text-(--color-accent)/50">
             /
           </span>
-          <span className="text-text-muted">admin</span>
+          <span className="text-(--color-accent)/70">admin</span>
         </Link>
 
         {email ? (
           <div className="flex items-center gap-4 md:gap-6">
             <span
               title={email}
-              className="hidden max-w-[200px] truncate font-mono text-sm text-text-muted md:inline"
+              className="mono hidden max-w-[200px] truncate text-sm text-(--color-accent)/70 md:inline"
             >
               {email}
             </span>
             <form action={logout}>
               <button
                 type="submit"
-                className="font-mono text-sm text-text-muted transition-colors duration-200 hover:text-text"
+                className="label text-message uppercase tracking-[0.08em] text-(--color-accent) transition-colors duration-200 hover:text-accent-bright"
               >
                 sair
               </button>

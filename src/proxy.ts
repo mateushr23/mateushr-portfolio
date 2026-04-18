@@ -25,7 +25,18 @@ import type { Database } from "@/types/database";
  * middleware's only job is the auth gate.
  */
 export async function proxy(request: NextRequest): Promise<NextResponse> {
-  let response = NextResponse.next({ request });
+  // Forward the pathname to the RSC tree via a request header. The root
+  // layout reads `x-pathname` via `headers()` to set `<html lang>` per
+  // locale (PT default at `/`, EN at `/en/*`). Next 16 only renders <html>
+  // in the root layout, so this header is the cleanest way to let that
+  // layout know which route segment it's serving without forcing a route
+  // group like `/[locale]/...` (which would move PT away from `/`).
+  const forwardedHeaders = new Headers(request.headers);
+  forwardedHeaders.set("x-pathname", request.nextUrl.pathname);
+
+  let response = NextResponse.next({
+    request: { headers: forwardedHeaders },
+  });
 
   const supabase = createServerClient<Database>(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -39,7 +50,9 @@ export async function proxy(request: NextRequest): Promise<NextResponse> {
           cookiesToSet.forEach(({ name, value }) => {
             request.cookies.set(name, value);
           });
-          response = NextResponse.next({ request });
+          response = NextResponse.next({
+            request: { headers: forwardedHeaders },
+          });
           cookiesToSet.forEach(({ name, value, options }) => {
             response.cookies.set(name, value, options);
           });
