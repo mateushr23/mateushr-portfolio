@@ -1,6 +1,6 @@
 # mateushr-portfolio
 
-Portfólio pessoal bilíngue de Mateus em Next.js 16, com home em PT-BR em `/` e em inglês em `/en`. Os repositórios públicos do GitHub são sincronizados tanto sob demanda pelo admin quanto por uma rotina diária automatizada pelo Claude: cada README é parseado de forma determinística via Octokit, extraindo a descrição PT, a descrição EN e a lista `## Stack`. O carrossel da home hidrata ao vivo do Supabase, e o admin em `/admin` (Supabase Auth com allowlist de e-mails) expõe toggles `is_featured` e `is_hidden` por repo.
+Portfólio pessoal bilíngue de Mateus em Next.js 16, com home em PT-BR em `/` e em inglês em `/en`. Os repositórios públicos do GitHub são sincronizados tanto sob demanda pelo admin quanto por uma rotina diária automatizada pelo Claude: cada README é parseado de forma determinística via Octokit, extraindo as descrições e tecnologias. O carrossel da home hidrata ao vivo do Supabase, e o admin em `/admin` (Supabase Auth com allowlist de e-mails) expõe toggles `is_featured` e `is_hidden` por repo.
 
 ## Recursos
 
@@ -60,7 +60,7 @@ supabase/migrations/  SQL versionado
 
 ## English
 
-Bilingual personal portfolio for Mateus HR on Next.js 16, with a PT-BR home at `/` and an English home at `/en`. Public GitHub repos are synced both on demand from the admin and via a daily automated routine by Claude: each README is parsed deterministically via Octokit, extracting the PT description, the EN description, and the `## Stack` list. The home carousel hydrates live from Supabase, and `/admin` (Supabase Auth with an email allowlist) exposes per-repo `is_featured` and `is_hidden` toggles.
+Bilingual personal portfolio for Mateus HR on Next.js 16, with a PT-BR home at `/` and an English home at `/en`. Public GitHub repos are synced both on demand from the admin and via a daily automated routine by Claude: each README is parsed deterministically via Octokit, extracting the descriptions and the techs. The home carousel hydrates live from Supabase, and `/admin` (Supabase Auth with an email allowlist) exposes per-repo `is_featured` and `is_hidden` toggles.
 
 ### Features
 
