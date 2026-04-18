@@ -48,20 +48,15 @@ export function generateMetadata(): Metadata {
       siteName: "Mateus Henrique",
       locale: dict.meta.ogLocale,
       type: "website",
-      images: [
-        {
-          url: "/og.png",
-          width: 1200,
-          height: 630,
-          alt: dict.meta.imageAlt,
-        },
-      ],
+      // `images` is intentionally omitted here — Next 16 auto-wires the
+      // `opengraph-image.tsx` file convention in this segment into the OG
+      // metadata (URL, dimensions, alt). See src/app/en/opengraph-image.tsx.
     },
     twitter: {
       card: "summary_large_image",
       title: dict.meta.ogTitle,
       description: dict.meta.ogDescription,
-      images: ["/og.png"],
+      // Same — `twitter.images` is auto-filled from opengraph-image.tsx.
     },
   };
 }

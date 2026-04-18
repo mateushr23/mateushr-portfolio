@@ -47,9 +47,10 @@ const jetbrainsMono = JetBrains_Mono({
   weight: ["400", "500", "600"],
 });
 
-// metadataBase is required in Next 16 so that relative image URLs (/og.png)
-// resolve to absolute URLs in generated <meta> tags. Fallback is the Vercel
-// alias; override via NEXT_PUBLIC_SITE_URL on preview/custom domains.
+// metadataBase is required in Next 16 so that relative image URLs (e.g. the
+// auto-generated /opengraph-image route) resolve to absolute URLs in the
+// rendered <meta> tags. Fallback is the Vercel alias; override via
+// NEXT_PUBLIC_SITE_URL on preview/custom domains.
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://mateushr-portfolio.vercel.app";
 
 // Root layout holds only metadata that applies to every route under the
