@@ -1,10 +1,14 @@
+import type { Dictionary } from "@/i18n";
+
 /**
  * Scene 2 content — skills display. Rendered inside the third scene of
  * `SceneController` once the user scrolls down from the presentation text.
  *
- * TODO(user): replace the placeholder skill list below with Mateus's real
- * stack (frameworks, languages, databases, tooling). Labels are uppercase
- * to match the Anima reference's mono/tracking treatment.
+ * Skill labels themselves are tech terms (React, Next.js, TypeScript…)
+ * and intentionally NOT translated — they read the same in every locale.
+ * The section label ("Skills") is pulled from the dictionary so the PT
+ * side can swap in "Habilidades" later if the user decides to localize it
+ * (currently both sides say "Skills" — it's a tech term even in PT copy).
  */
 const SKILLS = [
   "React",
@@ -17,16 +21,19 @@ const SKILLS = [
   "Docker",
 ];
 
-export function SkillsGrid() {
+interface SkillsGridProps {
+  dict: Dictionary["skills"];
+}
+
+export function SkillsGrid({ dict }: SkillsGridProps) {
   return (
     <div
       className="reveal flex flex-col items-center gap-6"
       style={{ ["--reveal-i" as string]: 0 }}
     >
       <p className="mono text-message uppercase tracking-widest text-(--color-accent) opacity-70">
-        Skills
+        {dict.title}
       </p>
-      {/* TODO(user): substitua pela sua lista real de skills */}
       <ul className="flex flex-wrap justify-center gap-3 md:gap-4">
         {SKILLS.map((skill) => (
           <li

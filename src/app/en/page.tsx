@@ -15,19 +15,15 @@ import { getDictionary } from "@/i18n";
 import { createClient } from "@/lib/supabase/server";
 
 /**
- * Home (RSC), Portuguese (default locale, served at `/`). Fetches the 3
- * showcase repos (proposal-ai, task-agent, doctalk) from Supabase so the
- * carousel renders live `stack` + `description_pt` + `description_en`
- * from the README-driven sync. The display order is fixed here (not
- * taken from the DB) because the carousel tells a deliberate narrative
- * sequence.
+ * Home (RSC), English locale, served at `/en`. Near-mirror of
+ * `src/app/page.tsx` — every string comes from `getDictionary("en")` and
+ * the carousel prefers `description_en` with a PT fallback, all handled
+ * inside `ProjectsCarousel` when `locale="en"` is passed.
  *
- * Every string rendered on the page flows from `getDictionary("pt")`. The
- * English sibling `/en/page.tsx` is a near-mirror of this file — keep
- * the two in lock-step when adding new UI chrome so hreflang alternates
- * stay symmetric.
- *
- * See handoff open_question_for_user #1 for the /projects follow-up.
+ * Structural parity with the PT page is intentional: hreflang alternates
+ * only stay honest if the two pages render the same chrome at the same
+ * depth. When adding new UI (e.g. a future /projects page) keep the two
+ * trees in lock-step.
  */
 const CAROUSEL_REPO_ORDER = ["proposal-ai", "task-agent", "doctalk"] as const;
 
@@ -39,9 +35,7 @@ async function fetchCarouselRepos(): Promise<CarouselRepo[]> {
     .in("name", CAROUSEL_REPO_ORDER as unknown as string[]);
 
   if (error) {
-    // Never echo error.message / .details / .hint (Supabase can leak schema
-    // names in those). Keep the fallback carousel empty; the downstream
-    // component renders a dignified placeholder when the list is empty.
+    // Swallow the error body — see src/app/page.tsx for rationale.
     const code =
       (error as { code?: string }).code ??
       String((error as { status?: number }).status ?? "unknown");
@@ -56,12 +50,12 @@ async function fetchCarouselRepos(): Promise<CarouselRepo[]> {
 }
 
 export function generateMetadata(): Metadata {
-  const dict = getDictionary("pt");
+  const dict = getDictionary("en");
   return {
     title: dict.meta.title,
     description: dict.meta.description,
     alternates: {
-      canonical: "/",
+      canonical: "/en",
       languages: {
         "pt-BR": "/",
         en: "/en",
@@ -71,7 +65,7 @@ export function generateMetadata(): Metadata {
     openGraph: {
       title: dict.meta.ogTitle,
       description: dict.meta.ogDescription,
-      url: "/",
+      url: "/en",
       siteName: "Mateus Henrique",
       locale: dict.meta.ogLocale,
       type: "website",
@@ -93,8 +87,8 @@ export function generateMetadata(): Metadata {
   };
 }
 
-export default async function Home() {
-  const locale = "pt" as const;
+export default async function HomeEn() {
+  const locale = "en" as const;
   const dict = getDictionary(locale);
   const carouselRepos = await fetchCarouselRepos();
 
@@ -112,12 +106,6 @@ export default async function Home() {
       <BackLink dict={dict.contact} />
       <SocialRail dict={dict.nav} />
 
-      {/*
-        Layout constraints (max-width, horizontal padding, pt for header
-        clearance, and the earth-safe padding-bottom) live inside each scene
-        wrapper in SceneController. Applying them here would double-offset
-        the absolutely-positioned scenes.
-      */}
       <main id="main" className="relative z-20 min-h-dvh">
         <SceneController carouselRepos={carouselRepos} locale={locale} dict={dict} />
       </main>

@@ -34,7 +34,7 @@ function formatPushedAt(pushedAt: string): string {
  */
 export function IndexRow({ repo, index }: IndexRowProps) {
   const number = String(index + 1).padStart(2, "0");
-  const description = repo.description_ai ?? EMPTY_DESCRIPTION;
+  const description = repo.description_pt ?? EMPTY_DESCRIPTION;
   const language = repo.language ?? "TypeScript";
   const pushedAtLabel = formatPushedAt(repo.pushed_at);
   // safeRepoHref only returns http(s) URLs that parse cleanly. When the DB

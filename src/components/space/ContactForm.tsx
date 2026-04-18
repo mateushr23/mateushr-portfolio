@@ -3,8 +3,10 @@
 import Image from "next/image";
 import { useState } from "react";
 
+import type { Dictionary } from "@/i18n";
+
 /**
- * Scene 4 contact form. Reached only via the top-right "Contact me" link
+ * Scene 4 contact form. Reached only via the top-right corner link
  * (which dispatches `scene:goto` with `{ scene: 4 }`); NOT reachable by
  * wheel/scroll advance from scene 3. The scene still regresses normally
  * (wheel-up / ArrowUp / PageUp → scene 3).
@@ -19,6 +21,8 @@ import { useState } from "react";
  * Inputs share a single `INPUT_CLASS` constant so the border + padding
  * + placeholder treatment stays consistent across the three fields.
  * Textarea adds `resize-none min-h-[9rem]` on top of the shared shape.
+ *
+ * i18n — all user-facing strings come from the `contact` dictionary slice.
  */
 
 const INPUT_CLASS =
@@ -26,7 +30,11 @@ const INPUT_CLASS =
 
 const TEXTAREA_CLASS = `${INPUT_CLASS} resize-none min-h-[9rem]`;
 
-export function ContactForm() {
+interface ContactFormProps {
+  dict: Dictionary["contact"];
+}
+
+export function ContactForm({ dict }: ContactFormProps) {
   const [email, setEmail] = useState("");
   const [subject, setSubject] = useState("");
   const [content, setContent] = useState("");
@@ -46,7 +54,7 @@ export function ContactForm() {
       style={{ ["--reveal-i" as string]: 0 }}
     >
       <h2 className="text-balance font-display text-name font-semibold uppercase leading-tight tracking-[0.025em] text-(--color-accent)">
-        Get in touch
+        {dict.heading}
       </h2>
       <form onSubmit={handleSubmit} className="flex flex-col gap-6">
         <div className="flex flex-col gap-2">
@@ -54,7 +62,7 @@ export function ContactForm() {
             htmlFor="contact-email"
             className="label text-message uppercase tracking-[0.08em] text-(--color-accent)"
           >
-            Email
+            {dict.emailLabel}
           </label>
           <input
             id="contact-email"
@@ -71,7 +79,7 @@ export function ContactForm() {
             htmlFor="contact-subject"
             className="label text-message uppercase tracking-[0.08em] text-(--color-accent)"
           >
-            Subject
+            {dict.subjectLabel}
           </label>
           <input
             id="contact-subject"
@@ -88,7 +96,7 @@ export function ContactForm() {
             htmlFor="contact-content"
             className="label text-message uppercase tracking-[0.08em] text-(--color-accent)"
           >
-            Content
+            {dict.contentLabel}
           </label>
           <textarea
             id="contact-content"
@@ -104,7 +112,7 @@ export function ContactForm() {
           type="submit"
           className="label inline-flex items-center gap-4 self-start text-corner uppercase tracking-[0.08em] text-(--color-accent) transition-colors hover:text-accent-bright"
         >
-          <span>Send message</span>
+          <span>{dict.submit}</span>
           <Image
             src="/assets/space/arrow-glyph.svg"
             alt=""

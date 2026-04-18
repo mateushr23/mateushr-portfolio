@@ -3,6 +3,8 @@
 import Image from "next/image";
 import { useEffect, useState, type MouseEvent } from "react";
 
+import type { Dictionary } from "@/i18n";
+
 /**
  * Single centered "CLICK to open" entry CTA. The SVG glyph is a self-contained
  * composition (text + corner brackets + purple drop-shadow), so the anchor
@@ -23,7 +25,11 @@ import { useEffect, useState, type MouseEvent } from "react";
  * for the ENTER key) to advance the locked-scroll scene state machine —
  * coupling is loose so NavCTAs doesn't need to know scene internals.
  */
-export function NavCTAs() {
+interface NavCTAsProps {
+  dict: Dictionary["nav"];
+}
+
+export function NavCTAs({ dict }: NavCTAsProps) {
   const [scene, setScene] = useState(0);
 
   useEffect(() => {
@@ -50,14 +56,14 @@ export function NavCTAs() {
 
   return (
     <nav
-      aria-label="Entrada principal"
+      aria-label={dict.entryNavLabel}
       className="reveal fixed bottom-[calc(var(--earth-visible)*0.12)] left-1/2 z-30 flex -translate-x-1/2 items-center justify-center"
       style={{ ["--reveal-i" as string]: 2 }}
     >
       {/* TODO(QA): link to real destination (was 3 CTAs, now 1 — pending user direction on target) */}
       <a
         href="#"
-        aria-label="Entrar"
+        aria-label={dict.entryLinkLabel}
         onClick={handleClick}
         className="inline-flex transition-transform duration-300 hover:scale-[1.02] focus-visible:scale-[1.02]"
       >

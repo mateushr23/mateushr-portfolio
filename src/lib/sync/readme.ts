@@ -3,14 +3,28 @@ import type { Octokit } from "@octokit/rest";
 /**
  * Output of the README extractor. All fields are null/empty safe so the
  * caller can treat a missing README as a non-error (the sync loop
- * continues with empty description + stack).
+ * continues with empty descriptions + stack).
  *
  * `readmeSha` is the GitHub blob SHA of the README file — included in
- * the source_hash so edits to the README trigger re-extraction on the
- * next sync.
+ * the source_hash so edits to the README (PT or EN sides) trigger
+ * re-extraction on the next sync.
+ *
+ * Bilingual shape (when `## English` is present):
+ *   - `descriptionPt` = first paragraph under the h1, stopping at the
+ *     first `##` (so the PT-BR block is everything above `## English`).
+ *   - `descriptionEn` = first paragraph inside the `## English` block,
+ *     after a `### <ProjectName>` heading; falls back to the first
+ *     non-empty line if no `###` heading is present.
+ * Monolingual shape (no `## English`):
+ *   - `descriptionPt` = current behaviour (h1 + first paragraph).
+ *   - `descriptionEn` = null.
+ * `stack` is parsed from the FIRST `## Stack` heading (PT side); the
+ * EN-side `### Stack` sits under `## English` and is ignored because the
+ * parser stops at the `## English` boundary when looking for stack.
  */
 export type ReadmeExtraction = {
-  description: string | null;
+  descriptionPt: string | null;
+  descriptionEn: string | null;
   stack: string[];
   readmeSha: string | null;
 };
@@ -25,11 +39,11 @@ const MAX_TOKEN_LENGTH = 40;
 const STACK_HEADING_ALIASES = ["Stack", "Tech Stack", "Tech"];
 
 /**
- * Fetch a repo's README via the GitHub API, parse the h1+paragraph as
- * the description and the `## Stack` bullet list as the stack tokens.
- * Returns empty/null fields on any non-fatal condition (missing README,
- * parse miss, API 404). Throws only on unexpected API errors — caller
- * wraps in try/catch so one repo cannot abort the whole sync.
+ * Fetch a repo's README via the GitHub API, parse PT-BR + EN descriptions
+ * and the `## Stack` bullet list. Returns empty/null fields on any
+ * non-fatal condition (missing README, parse miss, API 404). Throws only
+ * on unexpected API errors — the caller wraps in try/catch so one repo
+ * cannot abort the whole sync.
  */
 export async function extractFromReadme(
   octokit: Octokit,
@@ -51,17 +65,37 @@ export async function extractFromReadme(
     if (status !== 404) {
       console.warn(`extractFromReadme: ${owner}/${repo} failed with status=${status ?? "?"}`);
     }
-    return { description: null, stack: [], readmeSha: null };
+    return { descriptionPt: null, descriptionEn: null, stack: [], readmeSha: null };
   }
 
   // Strip UTF-8 BOM if present, normalize line endings.
   const normalized = content.replace(/^\uFEFF/, "").replace(/\r\n?/g, "\n");
   const lines = normalized.split("\n");
 
-  const description = parseDescription(lines);
-  const stack = parseStack(lines);
+  // Bilingual split: everything above `## English` is the PT section, the
+  // rest (including the heading) is the EN section. When the heading is
+  // absent, ptLines === lines and enLines === [].
+  const englishIndex = findEnglishHeadingIndex(lines);
+  const ptLines = englishIndex === -1 ? lines : lines.slice(0, englishIndex);
+  const enLines = englishIndex === -1 ? [] : lines.slice(englishIndex);
 
-  return { description, stack, readmeSha };
+  const descriptionPt = parseDescription(ptLines);
+  const descriptionEn = englishIndex === -1 ? null : parseEnglishDescription(enLines);
+  // Stack parsing is scoped to the PT side so the bilingual EN `### Stack`
+  // cannot accidentally win. Legacy monolingual READMEs still parse the
+  // same way (ptLines === lines).
+  const stack = parseStack(ptLines);
+
+  return { descriptionPt, descriptionEn, stack, readmeSha };
+}
+
+/**
+ * Locate the `## English` heading (case-insensitive match on a line that
+ * contains only `## English` modulo trailing whitespace). Returns -1 when
+ * the README is monolingual.
+ */
+function findEnglishHeadingIndex(lines: string[]): number {
+  return lines.findIndex((line) => /^##\s+English\s*$/i.test(line));
 }
 
 /**
@@ -87,9 +121,68 @@ function parseDescription(lines: string[]): string | null {
     i++;
   }
 
+  return joinParagraph(paragraph);
+}
+
+/**
+ * Extract the EN description from the slice of lines that starts with
+ * `## English`. Preferred shape is:
+ *
+ *   ## English
+ *
+ *   ### <ProjectName>
+ *
+ *   <first paragraph>
+ *
+ * Fallback: if no `###` heading is present under `## English`, the first
+ * non-empty, non-heading line starts the paragraph. Returns null when the
+ * block is empty or no paragraph can be captured.
+ */
+function parseEnglishDescription(enLines: string[]): string | null {
+  if (enLines.length === 0) return null;
+
+  // Skip the `## English` heading itself. The regex search is bounded to
+  // the first 8 lines after the heading so a malformed README cannot
+  // force a long scan.
+  let i = 1;
+  const scanLimit = Math.min(enLines.length, i + 8);
+  let subheadingIndex = -1;
+  for (let j = i; j < scanLimit; j++) {
+    if (/^###\s+\S/.test(enLines[j])) {
+      subheadingIndex = j;
+      break;
+    }
+  }
+
+  if (subheadingIndex !== -1) {
+    i = subheadingIndex + 1;
+  }
+
+  // Skip blank lines between the anchor (### heading or ## English) and
+  // the first paragraph line.
+  while (i < enLines.length && enLines[i].trim() === "") i++;
+
+  const paragraph: string[] = [];
+  while (i < enLines.length) {
+    const line = enLines[i];
+    const trimmed = line.trim();
+    // Stop at next heading or blank line terminating the paragraph.
+    if (trimmed === "" || /^#{1,6}\s/.test(trimmed)) break;
+    paragraph.push(trimmed);
+    i++;
+  }
+
+  return joinParagraph(paragraph);
+}
+
+/**
+ * Collapse a captured paragraph into a single whitespace-normalized,
+ * length-capped string. Shared by PT and EN paths so both obey
+ * MAX_DESCRIPTION_LENGTH identically.
+ */
+function joinParagraph(paragraph: string[]): string | null {
   if (paragraph.length === 0) return null;
 
-  // Collapse internal newlines to spaces, squeeze whitespace.
   let text = paragraph.join(" ").replace(/\s+/g, " ").trim();
   if (text === "") return null;
 

@@ -2,6 +2,8 @@
 
 import { useEffect, useRef, useState } from "react";
 
+import type { Dictionary, Locale } from "@/i18n";
+
 import { ContactForm } from "./ContactForm";
 import { GalaxyHeadline } from "./GalaxyHeadline";
 import { NameBanner } from "./NameBanner";
@@ -70,9 +72,11 @@ const TRANSITION_LOCK_MS = 900;
 
 interface SceneControllerProps {
   carouselRepos: CarouselRepo[];
+  locale: Locale;
+  dict: Dictionary;
 }
 
-export function SceneController({ carouselRepos }: SceneControllerProps) {
+export function SceneController({ carouselRepos, locale, dict }: SceneControllerProps) {
   const [scene, setScene] = useState(0);
   const transitionLockRef = useRef(false);
 
@@ -163,23 +167,23 @@ export function SceneController({ carouselRepos }: SceneControllerProps) {
         }}
         aria-hidden={scene !== 0}
       >
-        <GalaxyHeadline />
-        <NameBanner />
+        <GalaxyHeadline dict={dict.hero} />
+        <NameBanner dict={dict.hero} />
       </div>
       <Scene index={1} currentScene={scene}>
-        <PresentationText />
+        <PresentationText dict={dict.presentation} />
       </Scene>
       <Scene index={2} currentScene={scene}>
-        <SkillsGrid />
+        <SkillsGrid dict={dict.skills} />
       </Scene>
       <Scene index={3} currentScene={scene}>
-        <ProjectsScene repos={carouselRepos} />
+        <ProjectsScene repos={carouselRepos} locale={locale} dict={dict.projects} />
       </Scene>
       {/* Scene 4 — ContactForm. No earth-safe padding: the globe fades out
           on this scene (see EarthBackdrop), so we reclaim that space for
           the form itself. Uses the same slide pattern as scene 3. */}
       <Scene index={4} currentScene={scene} noEarthSafePad>
-        <ContactForm />
+        <ContactForm dict={dict.contact} />
       </Scene>
     </div>
   );

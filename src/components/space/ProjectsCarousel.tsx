@@ -3,19 +3,28 @@
 import Image from "next/image";
 import { useState } from "react";
 
-import type { Database } from "@/types/database";
+import type { Dictionary, Locale } from "@/i18n";
 import { safeRepoHref } from "@/lib/safe-url";
+import type { Database } from "@/types/database";
 
 /**
  * Scene 3 projects carousel. Replaces the invite card after the user clicks
- * "Ver projetos". Two arrow buttons cycle through the project list with
+ * the invite CTA. Two arrow buttons cycle through the project list with
  * wrap-around; the card content is wrapped in `aria-live="polite"` so screen
  * readers announce each project as the index changes.
  *
- * Data flow: repos are fetched in `src/app/page.tsx` (RSC) from the `repos`
- * Supabase table and handed down through SceneController → ProjectsScene.
- * `stack` and `description_ai` come from the README-driven sync — the carousel
- * holds no hardcoded project data.
+ * Data flow: repos are fetched in `src/app/page.tsx` (PT) and
+ * `src/app/en/page.tsx` (EN) from the `repos` Supabase table and handed down
+ * through SceneController → ProjectsScene. `stack`, `description_pt`, and
+ * `description_en` come from the README-driven sync — the carousel holds no
+ * hardcoded project data.
+ *
+ * Locale behaviour (i18n):
+ *  - `locale="pt"` → prefers `description_pt`, falls back to `description_en`
+ *    if PT is null, and finally to the dictionary's empty placeholder if both
+ *    are null. This matches the repos fetched from the DB where every repo is
+ *    expected to have at least one of the two columns populated.
+ *  - `locale="en"` → mirrored: prefers `description_en`, falls back to PT.
  *
  * Loose coupling: the parent `ProjectsScene` owns the view toggle; this
  * component only owns the current index.
@@ -25,19 +34,31 @@ type RepoRow = Database["public"]["Tables"]["repos"]["Row"];
 // Minimal surface the carousel consumes. Keeping it narrower than the full
 // Row makes it cheap to mock and makes it obvious which fields cross the
 // RSC → Client boundary.
-export type CarouselRepo = Pick<RepoRow, "github_id" | "name" | "description_ai" | "stack" | "url">;
+export type CarouselRepo = Pick<
+  RepoRow,
+  "github_id" | "name" | "description_pt" | "description_en" | "stack" | "url"
+>;
 
 interface ProjectsCarouselProps {
   repos: CarouselRepo[];
+  locale: Locale;
+  dict: Dictionary["projects"];
 }
 
-// Short, editorial. Matches IndexRow's fallback convention ("descrição em
-// breve") without the leading stack blurb — the stack row hides on empty,
-// so a description-only placeholder reads cleanly on its own.
-const EMPTY_DESCRIPTION = "Descrição em breve.";
-const EMPTY_LIST_COPY = "Projetos em curadoria — volte em breve.";
+/**
+ * Resolve which description string to render. Prefers the requested locale's
+ * column and falls back to the other when the requested one is null. Returns
+ * `null` when both columns are empty so the caller can decide whether to
+ * render a placeholder.
+ */
+function selectDescription(repo: CarouselRepo, locale: Locale): string | null {
+  if (locale === "en") {
+    return repo.description_en ?? repo.description_pt ?? null;
+  }
+  return repo.description_pt ?? repo.description_en ?? null;
+}
 
-export function ProjectsCarousel({ repos }: ProjectsCarouselProps) {
+export function ProjectsCarousel({ repos, locale, dict }: ProjectsCarouselProps) {
   const [index, setIndex] = useState(0);
 
   const total = repos.length;
@@ -48,7 +69,7 @@ export function ProjectsCarousel({ repos }: ProjectsCarouselProps) {
     return (
       <div className="flex w-full max-w-container items-center justify-center">
         <p className="mono text-message uppercase tracking-widest text-(--color-accent)/70">
-          {EMPTY_LIST_COPY}
+          {dict.emptyList}
         </p>
       </div>
     );
@@ -58,7 +79,7 @@ export function ProjectsCarousel({ repos }: ProjectsCarouselProps) {
   // renders, `repos[index]` could otherwise be undefined.
   const safeIndex = Math.min(index, total - 1);
   const current = repos[safeIndex];
-  const description = current.description_ai ?? EMPTY_DESCRIPTION;
+  const description = selectDescription(current, locale) ?? dict.emptyDescription;
   const stack = current.stack ?? [];
   const href = safeRepoHref(current.url);
 
@@ -69,7 +90,7 @@ export function ProjectsCarousel({ repos }: ProjectsCarouselProps) {
         onClick={prev}
         disabled={safeIndex === 0}
         aria-disabled={safeIndex === 0}
-        aria-label="Projeto anterior"
+        aria-label={dict.prevLabel}
         className="shrink-0 opacity-80 transition-opacity hover:opacity-100 focus-visible:opacity-100 disabled:opacity-30 disabled:cursor-not-allowed"
       >
         <Image
@@ -139,7 +160,7 @@ export function ProjectsCarousel({ repos }: ProjectsCarouselProps) {
         onClick={next}
         disabled={safeIndex === total - 1}
         aria-disabled={safeIndex === total - 1}
-        aria-label="Próximo projeto"
+        aria-label={dict.nextLabel}
         className="shrink-0 opacity-80 transition-opacity hover:opacity-100 focus-visible:opacity-100 disabled:opacity-30 disabled:cursor-not-allowed"
       >
         <Image

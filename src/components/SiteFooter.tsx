@@ -29,7 +29,7 @@ export function SiteFooter() {
             </li>
             <li>
               <a
-                href="https://linkedin.com/in/mateushr"
+                href="https://linkedin.com/in/mateushribeiro"
                 aria-label="LinkedIn"
                 target="_blank"
                 rel="noopener noreferrer"

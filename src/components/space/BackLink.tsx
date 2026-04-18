@@ -3,6 +3,8 @@
 import Image from "next/image";
 import { useEffect, useState } from "react";
 
+import type { Dictionary } from "@/i18n";
+
 /**
  * Top-left "back" button, visible only on scene 4 (ContactForm).
  *
@@ -20,7 +22,11 @@ import { useEffect, useState } from "react";
  * rails), which is simpler than an opacity fade and avoids invisible
  * click targets.
  */
-export function BackLink() {
+interface BackLinkProps {
+  dict: Dictionary["contact"];
+}
+
+export function BackLink({ dict }: BackLinkProps) {
   const [scene, setScene] = useState(0);
   const [prevScene, setPrevScene] = useState(0);
 
@@ -59,7 +65,7 @@ export function BackLink() {
         aria-hidden="true"
         className="h-6 w-auto shrink-0 md:h-7"
       />
-      <span>Voltar</span>
+      <span>{dict.back}</span>
     </button>
   );
 }

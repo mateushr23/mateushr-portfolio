@@ -11,6 +11,7 @@ export type SyncCounters = {
   hidden: number;
   regenerated: number;
   missing_readme: number;
+  missing_en_description: number;
   total: number;
 };
 
@@ -23,6 +24,11 @@ export type SyncCounters = {
  * ordering quirks. When the repo has no README, the literal
  * "no-readme" is used so a README being *added* later still flips the
  * hash (null → "no-readme" → real-sha all compare distinct).
+ *
+ * Bilingual note: the README SHA captures both PT and EN sides because
+ * they live in the same blob. No change to the hash domain is needed
+ * when adding/editing the `## English` section — the SHA flip alone
+ * schedules re-extraction.
  */
 function computeSourceHash(repo: NormalizedRepo, readmeSha: string | null): string {
   const topicsCsv = [...repo.topics].sort().join(",");
@@ -40,19 +46,23 @@ function computeSourceHash(repo: NormalizedRepo, readmeSha: string | null): stri
 type ExistingRow = {
   github_id: number;
   source_hash: string | null;
-  description_ai: string | null;
+  description_pt: string | null;
+  description_en: string | null;
   stack: string[] | null;
 };
 
 /**
  * Full sync entrypoint. Pulls the current GitHub snapshot, extracts
- * `description` + `stack` directly from each repo's README, diffs
- * against Supabase via `source_hash`, and marks no-longer-returned
+ * PT-BR + EN descriptions and `stack` directly from each repo's README,
+ * diffs against Supabase via `source_hash`, and marks no-longer-returned
  * repos as hidden (never deletes).
  *
- * Note: `description_ai` column kept for zero-migration compatibility;
- * semantics are now "description from README" (the first paragraph
- * under the h1). The column may be renamed in a follow-up migration.
+ * The column rename (`description_ai` → `description_pt`) and the new
+ * `description_en` column are applied via the
+ * 20260417200000_bilingual_descriptions migration. During the transition
+ * to bilingual READMEs, monolingual repos keep `description_en` NULL and
+ * the counter `missing_en_description` tracks how many still need an
+ * `## English` section.
  *
  * Returns counters for observability / route response.
  */
@@ -71,7 +81,7 @@ export async function syncRepos(): Promise<SyncCounters> {
   // 2. Load existing rows to drive the insert/update/hidden decision.
   const { data: existingRows, error: loadError } = await admin
     .from("repos")
-    .select("github_id, source_hash, description_ai, stack");
+    .select("github_id, source_hash, description_pt, description_en, stack");
 
   if (loadError) {
     throw new Error(`syncRepos: failed to load existing repos — ${loadError.message}`);
@@ -88,6 +98,7 @@ export async function syncRepos(): Promise<SyncCounters> {
     hidden: 0,
     regenerated: 0,
     missing_readme: 0,
+    missing_en_description: 0,
     total: freshRepos.length,
   };
 
@@ -105,7 +116,7 @@ export async function syncRepos(): Promise<SyncCounters> {
       // regeneration on the next sync.
       const extraction: ReadmeExtraction = await extractFromReadme(octokit, username, repo.name);
 
-      if (extraction.description === null) {
+      if (extraction.descriptionPt === null) {
         counters.missing_readme += 1;
       }
 
@@ -120,19 +131,31 @@ export async function syncRepos(): Promise<SyncCounters> {
         counters.regenerated += 1;
       }
 
-      const description_ai: string | null = shouldRegenerate
-        ? extraction.description
-        : (existing?.description_ai ?? null);
+      const descriptionPt: string | null = shouldRegenerate
+        ? extraction.descriptionPt
+        : (existing?.description_pt ?? null);
+      const descriptionEn: string | null = shouldRegenerate
+        ? extraction.descriptionEn
+        : (existing?.description_en ?? null);
       const stack: string[] = shouldRegenerate ? extraction.stack : (existing?.stack ?? []);
 
+      // Count repos still without an EN description AFTER the sync decision
+      // — both newly-synced and hash-unchanged rows contribute. This drives
+      // the "how many satellite READMEs still need translation" signal.
+      if (descriptionEn === null) {
+        counters.missing_en_description += 1;
+      }
+
       if (isNew) {
-        // Insert path — include description_ai, stack, and source_hash;
-        // let DB defaults handle is_featured=false, is_hidden=false.
+        // Insert path — include description_pt, description_en, stack,
+        // and source_hash; let DB defaults handle is_featured=false,
+        // is_hidden=false. Null (not '') is written when EN is absent.
         const { error: insertError } = await admin.from("repos").insert({
           github_id: repo.github_id,
           name: repo.name,
           url: repo.url,
-          description_ai,
+          description_pt: descriptionPt,
+          description_en: descriptionEn,
           stack,
           language: repo.language,
           stars: repo.stars,
@@ -148,7 +171,7 @@ export async function syncRepos(): Promise<SyncCounters> {
         // Update path — match by github_id. Do NOT touch is_featured so
         // admin curation is preserved. is_hidden is force-reset to false
         // because the repo is in the fresh set (it reappeared or was
-        // always visible). description_ai + stack are only overwritten
+        // always visible). description_pt/en + stack are only overwritten
         // when the hash flipped, to avoid churning every sync.
         const updatePayload: {
           name: string;
@@ -158,7 +181,8 @@ export async function syncRepos(): Promise<SyncCounters> {
           pushed_at: string;
           source_hash: string;
           is_hidden: boolean;
-          description_ai?: string | null;
+          description_pt?: string | null;
+          description_en?: string | null;
           stack?: string[];
         } = {
           name: repo.name,
@@ -171,7 +195,8 @@ export async function syncRepos(): Promise<SyncCounters> {
         };
 
         if (shouldRegenerate) {
-          updatePayload.description_ai = description_ai;
+          updatePayload.description_pt = descriptionPt;
+          updatePayload.description_en = descriptionEn;
           updatePayload.stack = stack;
         }
 

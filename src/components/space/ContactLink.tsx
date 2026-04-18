@@ -1,9 +1,11 @@
 "use client";
 
+import type { Dictionary } from "@/i18n";
+
 /**
- * Top-right "CONTACT ME" link. Rendered as live Bebas Neue text rather
- * than an SVG wordmark — keeps it a real link, a11y-friendly,
- * scale-perfect, and ~0 extra bytes.
+ * Top-right corner link ("Contact me" / "Fale comigo"). Rendered as live
+ * Bebas Neue text rather than an SVG wordmark — keeps it a real link,
+ * a11y-friendly, scale-perfect, and ~0 extra bytes.
  *
  * Behaviour: clicking dispatches a `scene:goto` CustomEvent with
  * `{ scene: 4 }`, which `SceneController` listens for and uses to jump
@@ -12,7 +14,11 @@
  * real link) and lets middle-click / open-in-new-tab degrade gracefully
  * — but the primary path is the JS handler that routes in-app.
  */
-export function ContactLink() {
+interface ContactLinkProps {
+  dict: Dictionary["contact"];
+}
+
+export function ContactLink({ dict }: ContactLinkProps) {
   const handleClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
     e.preventDefault();
     window.dispatchEvent(new CustomEvent("scene:goto", { detail: { scene: 4 } }));
@@ -24,7 +30,7 @@ export function ContactLink() {
       onClick={handleClick}
       className="label absolute right-6 top-6 z-30 text-corner text-(--color-accent) transition-colors hover:text-accent-bright md:right-12 md:top-10"
     >
-      Contact me
+      {dict.corner}
     </a>
   );
 }

@@ -3,6 +3,8 @@
 import Image from "next/image";
 import { useEffect, useState } from "react";
 
+import type { Dictionary } from "@/i18n";
+
 /**
  * Decorative Earth backdrop. A 900x900 cartoon globe with four astronauts
  * at cardinal points; only the NORTH arc (the top cap, plus the astronaut
@@ -41,7 +43,11 @@ import { useEffect, useState } from "react";
  * headline + NameBanner; the alt text on the inner <Image> stays descriptive
  * as a hedge for image-only crawlers / social previews.
  */
-export function EarthBackdrop() {
+interface EarthBackdropProps {
+  dict: Dictionary["earth"];
+}
+
+export function EarthBackdrop({ dict }: EarthBackdropProps) {
   const [scene, setScene] = useState(0);
 
   useEffect(() => {
@@ -83,7 +89,7 @@ export function EarthBackdrop() {
       >
         <Image
           src="/assets/space/earth-astronauts.png"
-          alt="Terra com astronautas nos pontos cardeais"
+          alt={dict.alt}
           width={900}
           height={900}
           priority

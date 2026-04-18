@@ -42,7 +42,7 @@ export function SiteHeader() {
               </li>
               <li>
                 <a
-                  href="https://linkedin.com/in/mateushr"
+                  href="https://linkedin.com/in/mateushribeiro"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="font-mono text-sm text-text-muted transition-colors duration-200 hover:text-text"

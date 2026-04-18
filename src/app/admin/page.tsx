@@ -31,7 +31,7 @@ async function fetchAllRepos(): Promise<Repo[]> {
   const { data, error } = await admin
     .from("repos")
     .select(
-      "id, github_id, name, description_ai, stack, language, stars, url, pushed_at, is_featured, is_hidden, created_at, updated_at, source_hash"
+      "id, github_id, name, description_pt, description_en, stack, language, stars, url, pushed_at, is_featured, is_hidden, created_at, updated_at, source_hash"
     )
     .order("pushed_at", { ascending: false });
 

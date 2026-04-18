@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react";
 
+import type { Dictionary, Locale } from "@/i18n";
+
 import { ProjectsCarousel, type CarouselRepo } from "./ProjectsCarousel";
 import { ProjectsInvite } from "./ProjectsInvite";
 
@@ -10,7 +12,7 @@ import { ProjectsInvite } from "./ProjectsInvite";
  * cross-slides between the invitation card and the projects carousel.
  *
  * The invite sits at `translateX(0)` and slides off to the LEFT when the
- * user clicks "Ver projetos"; the carousel starts at `translateX(100%)`
+ * user clicks the invite CTA; the carousel starts at `translateX(100%)`
  * (off-screen right) and slides in from the right to `translateX(0)`.
  *
  * Side effects:
@@ -30,9 +32,11 @@ const TRANSITION_MS = 700;
 
 interface ProjectsSceneProps {
   repos: CarouselRepo[];
+  locale: Locale;
+  dict: Dictionary["projects"];
 }
 
-export function ProjectsScene({ repos }: ProjectsSceneProps) {
+export function ProjectsScene({ repos, locale, dict }: ProjectsSceneProps) {
   const [view, setView] = useState<"invite" | "projects">("invite");
   const [openCount, setOpenCount] = useState(0);
 
@@ -77,7 +81,7 @@ export function ProjectsScene({ repos }: ProjectsSceneProps) {
         }}
         aria-hidden={!isInvite}
       >
-        <ProjectsInvite onEnter={openProjects} />
+        <ProjectsInvite onEnter={openProjects} dict={dict} />
       </div>
       <div
         className="absolute inset-0 flex items-center justify-center transition-all"
@@ -89,7 +93,7 @@ export function ProjectsScene({ repos }: ProjectsSceneProps) {
         }}
         aria-hidden={!isProjects}
       >
-        <ProjectsCarousel key={openCount} repos={repos} />
+        <ProjectsCarousel key={openCount} repos={repos} locale={locale} dict={dict} />
       </div>
     </div>
   );

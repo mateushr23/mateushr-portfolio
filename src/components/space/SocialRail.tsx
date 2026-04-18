@@ -3,6 +3,8 @@
 import { GitHubLogoIcon, LinkedInLogoIcon } from "@radix-ui/react-icons";
 import { useEffect, useRef, useState } from "react";
 
+import type { Dictionary } from "@/i18n";
+
 /**
  * Left rail with GitHub + LinkedIn. Default layout is a vertical stack
  * anchored at mid-left; when `ProjectsScene` toggles the carousel view it
@@ -57,17 +59,20 @@ import { useEffect, useRef, useState } from "react";
  * disabled under `prefers-reduced-motion: reduce` (see `globals.css`), so the
  * displayView flip becomes an instant layout change for those users.
  */
+// Platform names stay verbatim (brand terms); only the "(opens in new tab)"
+// hint around them is localized — it's built at render time by concatenating
+// the platform name with `dict.nav.externalTabSuffix`.
 const SOCIAL_LINKS = [
   {
     key: "github",
     href: "https://github.com/mateushr23",
-    label: "GitHub (abre em nova aba)",
+    name: "GitHub",
     Icon: GitHubLogoIcon,
   },
   {
     key: "linkedin",
-    href: "https://linkedin.com/in/mateushr",
-    label: "LinkedIn (abre em nova aba)",
+    href: "https://linkedin.com/in/mateushribeiro",
+    name: "LinkedIn",
     Icon: LinkedInLogoIcon,
   },
 ] as const;
@@ -82,7 +87,11 @@ function restTransform(i: number, displayView: boolean): string {
   return "translate(0, 0)";
 }
 
-export function SocialRail() {
+interface SocialRailProps {
+  dict: Dictionary["nav"];
+}
+
+export function SocialRail({ dict }: SocialRailProps) {
   const [projectsView, setProjectsView] = useState(false);
   const [displayView, setDisplayView] = useState(false);
   const [phase, setPhase] = useState<Phase>("idle");
@@ -176,8 +185,8 @@ export function SocialRail() {
   const phaseClass = phase === "exit" ? "sr-phase-exit" : phase === "enter" ? "sr-phase-enter" : "";
 
   return (
-    <nav aria-label="Links sociais" className={className} style={navStyle}>
-      {SOCIAL_LINKS.map(({ key, href, label, Icon }, i) => (
+    <nav aria-label={dict.socialNavLabel} className={className} style={navStyle}>
+      {SOCIAL_LINKS.map(({ key, href, name, Icon }, i) => (
         <div
           key={key}
           className="absolute inset-0"
@@ -188,7 +197,7 @@ export function SocialRail() {
               href={href}
               target="_blank"
               rel="noopener noreferrer"
-              aria-label={label}
+              aria-label={`${name}${dict.externalTabSuffix}`}
               className="inline-flex h-full w-full items-center justify-center text-(--color-accent) transition-colors hover:text-accent-bright"
             >
               <Icon className="h-10 w-10" />

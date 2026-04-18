@@ -1,0 +1,75 @@
+{
+  "stage": "5-bilingual-qa",
+  "verdict": "PASS_WITH_WARNINGS",
+  "gates": {
+    "tsc": "pass",
+    "eslint": "pass",
+    "build": "pass",
+    "axe_manual": "No blocking violations. LocaleToggle uses aria-pressed on <Link> (role=link) which is technically out-of-contract for aria-pressed (WAI-ARIA lists it under role=button). Functionally harmless and broadly tolerated by AT, but semantically noisy. Unmount pattern on scene 4 is correctly chosen (prevents hidden focusable descendants per APG). Skip link + focus order on both /, /en routes preserved; LocaleToggle is keyboard-reachable via Tab on scenes 0-3 as specified.",
+    "seo_metadata": "Both / and /en generateMetadata emit title, description, canonical (\"/\" and \"/en\" respectively), alternates.languages { pt-BR: /, en: /en, x-default: / } symmetric on both sides, and openGraph.locale pt_BR / en_US from dict.meta.ogLocale. Sitemap lists both entries (priority 1.0 and 0.9). Root layout emits <html lang> per x-pathname header with pt-BR default fallback — proxy sets x-pathname on both NextResponse.next paths (initial + cookie-refresh rebuild).",
+    "db_contract": "src/types/database.ts regenerated with description_pt + description_en and no description_ai. Zero remaining description_ai references under src/ (only legacy handoffs + the init migration comment, and the new bilingual migration that renames it — all expected). Admin select + sync ExistingRow + home pages all select description_pt,description_en.",
+    "readme_parser": "Bilingual split at /^##\\s+English\\s*$/i correctly isolates PT (above) and EN (below). parseEnglishDescription skips the ## English line, scans first 8 lines for ### subheading, then captures paragraph until next heading/blank — with null fallback when empty. Monolingual READMEs: englishIndex=-1 ⇒ ptLines===lines, enLines===[], descriptionEn=null (legacy behaviour preserved). Stack parsing scoped to ptLines so EN-side ### Stack cannot leak. Both PT and EN paths call the shared joinParagraph helper → same MAX_DESCRIPTION_LENGTH (500) + ellipsis + whitespace normalization."
+  },
+  "findings": [
+    {
+      "severity": "P2",
+      "file": "src/components/space/LocaleToggle.tsx",
+      "description": "aria-pressed on <Link> (role=link): aria-pressed is specified for role=button. Using it on a link is a minor ARIA contract mismatch. Screen readers generally still announce the state, but lint/axe with strict rules (wcag2a aria-allowed-attr) can flag it.",
+      "fix_suggestion": "Option A (preferred): keep PT/EN as real navigation links and replace aria-pressed with aria-current=\"page\" on the currently active side — that is the canonical ARIA pattern for a same-page indicator on a link. Option B: convert them to <button type=\"button\"> that router.push and keep aria-pressed. Option A is cheaper and preserves middle-click / open-in-new-tab semantics."
+    },
+    {
+      "severity": "P2",
+      "file": "src/i18n/pt.ts",
+      "description": "dict.hero.messageMarker is \"Uma mensagem da Terra\" (PT), but GalaxyHeadline.tsx's doc comment + en.ts messageMarker keep the marker in English (\"A MESSAGE FROM EARTH\") with a note that it stays English on both sides as a wordmark motif. The PT locale actually translates it, which contradicts the stated design intent in the comment and breaks the wordmark consistency hreflang alternates imply.",
+      "fix_suggestion": "Either: (a) set pt.hero.messageMarker = \"A MESSAGE FROM EARTH\" to match en.ts and the documented wordmark rule in GalaxyHeadline.tsx, or (b) update the comments in GalaxyHeadline.tsx and en.ts to reflect that PT renders a translated marker. Pick one and align. This is a design-intent mismatch, not a functional bug."
+    },
+    {
+      "severity": "P2",
+      "file": "src/app/page.tsx, src/app/en/page.tsx",
+      "description": "CAROUSEL_REPO_ORDER constant and fetchCarouselRepos() are duplicated verbatim across PT and EN page files. Drift risk: if the project order changes, the two pages can silently diverge (one page shows the old order). Not blocking — just a maintainability warning.",
+      "fix_suggestion": "Extract fetchCarouselRepos() and CAROUSEL_REPO_ORDER into a shared helper (e.g. src/lib/home/fetch-carousel.ts) and call it from both page files. Both pages already accept a locale param, so the helper signature stays locale-agnostic (it doesn't pick description_pt vs description_en — ProjectsCarousel does)."
+    },
+    {
+      "severity": "P2",
+      "file": "src/components/IndexRow.tsx",
+      "description": "EMPTY_DESCRIPTION is a hardcoded PT-BR string (\"Projeto em TypeScript — descrição em breve.\"). This component is not imported by any active route (dead code — replaced by the space design), so it does not leak PT into the EN render path. But if a future page re-adopts IndexRow it will render PT verbatim on /en. Flagged as a tech-debt warning, not a bug in this feature.",
+      "fix_suggestion": "Either delete IndexRow.tsx + ProjectIndex.tsx + SiteHeader.tsx + SiteFooter.tsx (confirmed unused via grep) as dead code in a follow-up cleanup commit, or refactor EMPTY_DESCRIPTION + header/footer copy to accept a dict slice before re-introducing them to a route."
+    }
+  ],
+  "test_catalog": [
+    {
+      "file": "src/i18n/index.test.ts",
+      "covers": "getDictionary returns the PT dictionary for locale='pt', EN for 'en', and falls back to PT for an unknown/garbage locale. getLocaleFromPathname returns 'en' for '/en', '/en/foo'; 'pt' for '/', '/admin', null, undefined, empty string."
+    },
+    {
+      "file": "src/i18n/types.test.ts",
+      "covers": "Structural parity — every key path present in pt must be present in en and vice versa (type-level exhaustiveness is enforced by Dictionary, but a runtime assertion protects against stringly-typed divergence in templates/tests). Detects missing keys in a non-default locale."
+    },
+    {
+      "file": "src/lib/sync/readme.test.ts",
+      "covers": "extractFromReadme / parseDescription / parseEnglishDescription: (1) monolingual README → {descriptionPt: <paragraph>, descriptionEn: null, stack: [...]}; (2) bilingual README with ### Subheading → EN paragraph comes from after the ### line; (3) bilingual README without ### → EN paragraph is the first non-blank non-heading line under ## English; (4) stack parser stops at ## English even when EN side declares its own ### Stack; (5) joinParagraph truncation at MAX_DESCRIPTION_LENGTH (500) applied to both PT and EN; (6) missing README → all-null extraction; (7) CRLF normalization; (8) UTF-8 BOM strip."
+    },
+    {
+      "file": "src/lib/sync/sync.test.ts",
+      "covers": "syncRepos hash-gated regeneration: when source_hash flips, description_pt + description_en + stack are all overwritten from the extraction; when unchanged, the existing values are preserved. missing_en_description counter increments when descriptionEn resolves to null post-decision (both newly-synced and cached rows). Insert path writes null (not '') for missing EN. Hide-missing loop untouched by the bilingual change."
+    },
+    {
+      "file": "src/components/space/ProjectsCarousel.test.tsx",
+      "covers": "selectDescription locale fallback: locale='pt' with both columns → PT wins; locale='pt' with only EN → EN shown; locale='en' with both → EN wins; locale='en' with only PT → PT shown; both null → dict.emptyDescription placeholder. Carousel arrows disabled at bounds; aria-live region announces current project. Empty repos list renders dict.emptyList, not blank."
+    },
+    {
+      "file": "src/components/space/LocaleToggle.test.tsx",
+      "covers": "Renders PT | EN with aria-pressed (or aria-current after finding P2 fix) reflecting the locale prop. Clicking PT link hrefs to '/', EN to '/en'. Unmounts when scene:change CustomEvent emits {scene: 4}; remounts on {scene: 0..3}. Keyboard Tab order places it before ContactLink on scenes 0-3."
+    },
+    {
+      "file": "e2e/i18n.spec.ts",
+      "covers": "Playwright: (1) navigate to / → <html lang=\"pt-BR\">, headline in PT, og:locale=pt_BR in <head>; (2) click EN → URL is /en, <html lang=\"en\">, headline in EN, og:locale=en_US; (3) canonical link rel in both pages matches the current route; (4) link rel=\"alternate\" hreflang=\"pt-BR\" and hreflang=\"en\" present and symmetric on both pages; (5) sitemap.xml contains both URLs."
+    },
+    {
+      "file": "e2e/a11y.spec.ts",
+      "covers": "@axe-core/playwright: zero wcag2a + wcag2aa violations on /, /en, and the scene 4 state of both (reached via ContactLink click). Color contrast checks on the LocaleToggle opacity-40 inactive state in both the default and hover states (the 40% opacity on --color-accent may regress contrast ratios)."
+    }
+  ],
+  "no_existing_suite": true,
+  "ready_for_review": true
+}
