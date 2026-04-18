@@ -7,12 +7,11 @@ import { HomeAnchors } from "@/components/space/HomeAnchors";
 import { LocaleToggle } from "@/components/space/LocaleToggle";
 import { LockScroll } from "@/components/space/LockScroll";
 import { NavCTAs } from "@/components/space/NavCTAs";
-import type { CarouselRepo } from "@/components/space/ProjectsCarousel";
 import { SceneController } from "@/components/space/SceneController";
 import { SocialRail } from "@/components/space/SocialRail";
 import { Starfield } from "@/components/space/Starfield";
 import { getDictionary } from "@/i18n";
-import { createClient } from "@/lib/supabase/server";
+import { fetchCarouselRepos } from "@/lib/home/carousel-repos";
 
 /**
  * Home (RSC), English locale, served at `/en`. Near-mirror of
@@ -23,31 +22,9 @@ import { createClient } from "@/lib/supabase/server";
  * Structural parity with the PT page is intentional: hreflang alternates
  * only stay honest if the two pages render the same chrome at the same
  * depth. When adding new UI (e.g. a future /projects page) keep the two
- * trees in lock-step.
+ * trees in lock-step. The repo list + select columns live in
+ * `@/lib/home/carousel-repos` so both routes stay aligned.
  */
-const CAROUSEL_REPO_ORDER = ["proposal-ai", "task-agent", "doctalk"] as const;
-
-async function fetchCarouselRepos(): Promise<CarouselRepo[]> {
-  const supabase = await createClient();
-  const { data, error } = await supabase
-    .from("repos")
-    .select("github_id, name, description_pt, description_en, stack, url")
-    .in("name", CAROUSEL_REPO_ORDER as unknown as string[]);
-
-  if (error) {
-    // Swallow the error body — see src/app/page.tsx for rationale.
-    const code =
-      (error as { code?: string }).code ??
-      String((error as { status?: number }).status ?? "unknown");
-    console.error("home_fetch_failed", { code, action: "fetchCarouselRepos" });
-    return [];
-  }
-
-  const byName = new Map(data.map((repo) => [repo.name, repo]));
-  return CAROUSEL_REPO_ORDER.map((name) => byName.get(name)).filter(
-    (repo): repo is CarouselRepo => repo !== undefined
-  );
-}
 
 export function generateMetadata(): Metadata {
   const dict = getDictionary("en");
@@ -102,8 +79,8 @@ export default async function HomeEn() {
       <EarthBackdrop dict={dict.earth} />
 
       <LocaleToggle locale={locale} dict={dict.toggle} />
-      <ContactLink dict={dict.contact} />
-      <BackLink dict={dict.contact} />
+      <ContactLink label={dict.contact.corner} />
+      <BackLink label={dict.contact.back} />
       <SocialRail dict={dict.nav} />
 
       <main id="main" className="relative z-20 min-h-dvh">

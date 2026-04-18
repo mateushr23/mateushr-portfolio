@@ -27,8 +27,9 @@ import type { Dictionary, Locale } from "@/i18n";
  *
  * We never carry query strings across the switch (the home page has no
  * meaningful ones right now, and preserving them across a locale flip can
- * leak stale state). The aria-pressed attribute tells screen readers which
- * side is currently active.
+ * leak stale state). The `aria-current="page"` attribute on the active side
+ * is the canonical WAI-ARIA 1.2 same-page-indicator for links; the inactive
+ * side omits the attribute entirely (no `aria-current="false"`).
  *
  * Styling — Orbitron via `font-display` matches the hero headline's visual
  * family; accent color follows `--color-accent`. Active side is opaque,
@@ -71,7 +72,7 @@ export function LocaleToggle({ locale, dict }: LocaleToggleProps) {
       <Link
         href="/"
         aria-label={dict.switchToPt}
-        aria-pressed={ptIsActive}
+        {...(ptIsActive ? { "aria-current": "page" as const } : {})}
         className={`transition-opacity hover:opacity-100 focus-visible:opacity-100 ${
           ptIsActive ? "opacity-100" : "opacity-40"
         }`}
@@ -82,7 +83,7 @@ export function LocaleToggle({ locale, dict }: LocaleToggleProps) {
       <Link
         href="/en"
         aria-label={dict.switchToEn}
-        aria-pressed={enIsActive}
+        {...(enIsActive ? { "aria-current": "page" as const } : {})}
         className={`transition-opacity hover:opacity-100 focus-visible:opacity-100 ${
           enIsActive ? "opacity-100" : "opacity-40"
         }`}

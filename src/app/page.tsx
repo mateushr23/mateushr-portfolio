@@ -7,20 +7,16 @@ import { HomeAnchors } from "@/components/space/HomeAnchors";
 import { LocaleToggle } from "@/components/space/LocaleToggle";
 import { LockScroll } from "@/components/space/LockScroll";
 import { NavCTAs } from "@/components/space/NavCTAs";
-import type { CarouselRepo } from "@/components/space/ProjectsCarousel";
 import { SceneController } from "@/components/space/SceneController";
 import { SocialRail } from "@/components/space/SocialRail";
 import { Starfield } from "@/components/space/Starfield";
 import { getDictionary } from "@/i18n";
-import { createClient } from "@/lib/supabase/server";
+import { fetchCarouselRepos } from "@/lib/home/carousel-repos";
 
 /**
  * Home (RSC), Portuguese (default locale, served at `/`). Fetches the 3
- * showcase repos (proposal-ai, task-agent, doctalk) from Supabase so the
- * carousel renders live `stack` + `description_pt` + `description_en`
- * from the README-driven sync. The display order is fixed here (not
- * taken from the DB) because the carousel tells a deliberate narrative
- * sequence.
+ * showcase repos via the shared `fetchCarouselRepos` helper so PT and EN
+ * stay in lock-step on display order + select columns.
  *
  * Every string rendered on the page flows from `getDictionary("pt")`. The
  * English sibling `/en/page.tsx` is a near-mirror of this file — keep
@@ -29,31 +25,6 @@ import { createClient } from "@/lib/supabase/server";
  *
  * See handoff open_question_for_user #1 for the /projects follow-up.
  */
-const CAROUSEL_REPO_ORDER = ["proposal-ai", "task-agent", "doctalk"] as const;
-
-async function fetchCarouselRepos(): Promise<CarouselRepo[]> {
-  const supabase = await createClient();
-  const { data, error } = await supabase
-    .from("repos")
-    .select("github_id, name, description_pt, description_en, stack, url")
-    .in("name", CAROUSEL_REPO_ORDER as unknown as string[]);
-
-  if (error) {
-    // Never echo error.message / .details / .hint (Supabase can leak schema
-    // names in those). Keep the fallback carousel empty; the downstream
-    // component renders a dignified placeholder when the list is empty.
-    const code =
-      (error as { code?: string }).code ??
-      String((error as { status?: number }).status ?? "unknown");
-    console.error("home_fetch_failed", { code, action: "fetchCarouselRepos" });
-    return [];
-  }
-
-  const byName = new Map(data.map((repo) => [repo.name, repo]));
-  return CAROUSEL_REPO_ORDER.map((name) => byName.get(name)).filter(
-    (repo): repo is CarouselRepo => repo !== undefined
-  );
-}
 
 export function generateMetadata(): Metadata {
   const dict = getDictionary("pt");
@@ -108,8 +79,8 @@ export default async function Home() {
       <EarthBackdrop dict={dict.earth} />
 
       <LocaleToggle locale={locale} dict={dict.toggle} />
-      <ContactLink dict={dict.contact} />
-      <BackLink dict={dict.contact} />
+      <ContactLink label={dict.contact.corner} />
+      <BackLink label={dict.contact.back} />
       <SocialRail dict={dict.nav} />
 
       {/*

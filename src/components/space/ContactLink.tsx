@@ -1,7 +1,5 @@
 "use client";
 
-import type { Dictionary } from "@/i18n";
-
 /**
  * Top-right corner link ("Contact me" / "Fale comigo"). Rendered as live
  * Bebas Neue text rather than an SVG wordmark — keeps it a real link,
@@ -15,10 +13,11 @@ import type { Dictionary } from "@/i18n";
  * — but the primary path is the JS handler that routes in-app.
  */
 interface ContactLinkProps {
-  dict: Dictionary["contact"];
+  /** Localized corner-link label (e.g. "Fale comigo" / "Contact me"). */
+  label: string;
 }
 
-export function ContactLink({ dict }: ContactLinkProps) {
+export function ContactLink({ label }: ContactLinkProps) {
   const handleClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
     e.preventDefault();
     window.dispatchEvent(new CustomEvent("scene:goto", { detail: { scene: 4 } }));
@@ -30,7 +29,7 @@ export function ContactLink({ dict }: ContactLinkProps) {
       onClick={handleClick}
       className="label absolute right-6 top-6 z-30 text-corner text-(--color-accent) transition-colors hover:text-accent-bright md:right-12 md:top-10"
     >
-      {dict.corner}
+      {label}
     </a>
   );
 }

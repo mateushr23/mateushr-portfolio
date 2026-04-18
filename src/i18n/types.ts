@@ -23,7 +23,7 @@ export const DEFAULT_LOCALE: Locale = "pt";
 
 export interface Dictionary {
   hero: {
-    /** Kept in English on both sides — rendered as a display wordmark. */
+    /** Short marker line rendered above the hero headline. Translated per locale (sentence case — component applies uppercase visual treatment). */
     messageMarker: string;
     /** Headline: "Hello fellow galaxy member" / "Olá, colega da galáxia" */
     headline: string;

@@ -3,8 +3,6 @@
 import Image from "next/image";
 import { useEffect, useState } from "react";
 
-import type { Dictionary } from "@/i18n";
-
 /**
  * Top-left "back" button, visible only on scene 4 (ContactForm).
  *
@@ -23,10 +21,11 @@ import type { Dictionary } from "@/i18n";
  * click targets.
  */
 interface BackLinkProps {
-  dict: Dictionary["contact"];
+  /** Localized visible label for the button (e.g. "Voltar" / "Back"). */
+  label: string;
 }
 
-export function BackLink({ dict }: BackLinkProps) {
+export function BackLink({ label }: BackLinkProps) {
   const [scene, setScene] = useState(0);
   const [prevScene, setPrevScene] = useState(0);
 
@@ -65,7 +64,7 @@ export function BackLink({ dict }: BackLinkProps) {
         aria-hidden="true"
         className="h-6 w-auto shrink-0 md:h-7"
       />
-      <span>{dict.back}</span>
+      <span>{label}</span>
     </button>
   );
 }

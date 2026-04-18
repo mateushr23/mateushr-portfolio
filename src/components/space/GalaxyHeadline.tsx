@@ -6,8 +6,9 @@ import type { Dictionary } from "@/i18n";
  * bottom-aligned to the left — mirrored per handoff).
  *
  * Now takes a `dict` slice so the PT and EN routes render their locale's
- * headline without duplicating the markup. The marker text itself stays
- * in English on both sides (it's the wordmark motif of the design).
+ * headline without duplicating the markup. The marker text is translated
+ * per locale (sentence case in the dict; this component applies the
+ * uppercase visual treatment via Tailwind's `uppercase`).
  */
 function MessageMarker({ side, label }: { side: "top" | "bottom"; label: string }) {
   const textFirst = side === "bottom";
