@@ -232,6 +232,56 @@ body.no-scroll {
   background: radial-gradient(ellipse 80% 40% at 50% 15%, #14102a 0%, #000000 40%);
 }
 
+/* Shooting stars — pure-CSS streaks co-planar with the starfield.
+ * Each .shooting-star is a 120px diagonal gradient line rotated ~-20°,
+ * translated across the viewport via the shared `shooting-star-streak`
+ * keyframe. Origins + timings come from inline style in ShootingStars.tsx.
+ * Long delays (10–25s avg between streaks) keep the motion calm. */
+.shooting-stars {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+.shooting-star {
+  position: absolute;
+  width: 120px;
+  height: 1.5px;
+  background: linear-gradient(
+    90deg,
+    var(--color-accent) 0%,
+    var(--color-accent) 8%,
+    rgba(206, 183, 255, 0.4) 30%,
+    transparent 100%
+  );
+  border-radius: 999px;
+  transform: rotate(-20deg);
+  transform-origin: 0 50%;
+  opacity: 0;
+  box-shadow: 0 0 6px var(--color-accent-glow);
+  animation-name: shooting-star-streak;
+  animation-timing-function: ease-out;
+  animation-iteration-count: infinite;
+  will-change: transform, opacity;
+}
+@keyframes shooting-star-streak {
+  0% {
+    transform: translate(20vw, -20vh) rotate(-20deg);
+    opacity: 0;
+  }
+  15% {
+    opacity: 1;
+  }
+  85% {
+    opacity: 1;
+  }
+  100% {
+    transform: translate(-80vw, 80vh) rotate(-20deg);
+    opacity: 0;
+  }
+}
+
 /* Motion — all transform/opacity only */
 @keyframes float-slow {
   0%,
@@ -384,6 +434,9 @@ body.no-scroll {
       radial-gradient(1.5px 1.5px at 45% 80%, #ffffff 50%, transparent 100%),
       radial-gradient(1px 1px at 85% 60%, #8a82a8 50%, transparent 100%),
       radial-gradient(ellipse 80% 40% at 50% 15%, #14102a 0%, #000000 40%);
+  }
+  .shooting-stars {
+    display: none;
   }
 }
 

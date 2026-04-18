@@ -9,6 +9,8 @@ import { LockScroll } from "@/components/space/LockScroll";
 import { NavCTAs } from "@/components/space/NavCTAs";
 import { SceneController } from "@/components/space/SceneController";
 import { SocialRail } from "@/components/space/SocialRail";
+import { SocialRailMobile } from "@/components/space/SocialRailMobile";
+import { ShootingStars } from "@/components/space/ShootingStars";
 import { Starfield } from "@/components/space/Starfield";
 import { getDictionary } from "@/i18n";
 import { fetchCarouselRepos } from "@/lib/home/carousel-repos";
@@ -76,12 +78,14 @@ export default async function Home() {
         {dict.hero.skipToContent}
       </a>
       <Starfield />
+      <ShootingStars />
       <EarthBackdrop dict={dict.earth} />
 
       <LocaleToggle locale={locale} dict={dict.toggle} />
       <ContactLink label={dict.contact.corner} />
       <BackLink label={dict.contact.back} />
       <SocialRail dict={dict.nav} />
+      <SocialRailMobile dict={dict.nav} contactLabel={dict.contact.corner} />
 
       {/*
         Layout constraints (max-width, horizontal padding, pt for header

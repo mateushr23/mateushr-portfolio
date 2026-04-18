@@ -137,7 +137,7 @@ export function ProjectsCarousel({ repos, locale, dict }: ProjectsCarouselProps)
               current.name
             )}
           </h3>
-          <p className="max-w-[48ch] text-(length:--text-body) leading-relaxed text-(--color-accent)">
+          <p className="max-w-[72ch] text-(length:--text-body) leading-relaxed text-(--color-accent)">
             {description}
           </p>
           {stack.length > 0 ? (

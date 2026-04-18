@@ -1,0 +1,26 @@
+{
+  "stage": "review",
+  "timestamp": "2026-04-17T00:00:00Z",
+  "verdict": "APPROVE",
+  "findings": [
+    {
+      "severity": "SUGGESTION",
+      "file": "src/components/space/ProjectsCarousel.tsx",
+      "line": 140,
+      "note": "72ch is within the 45-75ch typographic sweet spot (upper end) and aligns well with the centered carousel card. text-balance is only applied to the <h3> title (line 126); the <p> uses leading-relaxed without text-balance, which is the correct choice for multi-line body copy — balance would fight the wider measure. No action needed."
+    },
+    {
+      "severity": "SUGGESTION",
+      "file": "src/app/globals.css",
+      "line": null,
+      "note": "No project-level prose-width design token exists. Current prose widths are ad-hoc across the codebase: max-w-[48ch] (EmptyAdminState), max-w-[62ch] (Hero), and now max-w-[72ch] (carousel). max-w-container (1440px, registered via --container-container) is a layout token, not a reading-measure token. Consider registering a --prose-measure (or tiered --prose-narrow/--prose-wide) token in @theme so future body paragraphs pull from one source of truth. Out of scope for this one-line bump — flagging for future consistency work."
+    },
+    {
+      "severity": "SUGGESTION",
+      "file": "src/components/space/ProjectsCarousel.tsx",
+      "line": 140,
+      "note": "Pre-existing (not introduced by this change): text-(length:--text-body) references a CSS custom property --text-body that is not defined in src/app/globals.css @theme. The registered type-scale tokens are --text-hero, --text-name, --text-message, --text-corner, --text-anchor, --text-click (plus legacy admin tokens). If --text-body is intentionally undefined and relying on browser default, fine — but this looks like an orphan reference. Outside this review's scope; flagging for a follow-up."
+    }
+  ],
+  "notes": "Single-line change verified via git diff: max-w-[48ch] -> max-w-[72ch] on line 140, nothing else. Change is safe, reversible, and does not conflict with max-w-container (layout, 1440px) on the parent flex row (line 87) — the <p> is a descendant constrained by its own 72ch ceiling, well below the 1440px outer cap. leading-relaxed + no text-balance on the <p> remains appropriate at 72ch. APPROVE as-is. Two pre-existing concerns (no prose-width token, orphan --text-body reference) surfaced during review but are explicitly out of scope for this width bump."
+}

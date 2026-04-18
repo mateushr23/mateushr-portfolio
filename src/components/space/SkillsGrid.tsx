@@ -15,10 +15,10 @@ const SKILLS = [
   "Next.js",
   "TypeScript",
   "Node.js",
-  "Tailwind CSS",
   "PostgreSQL",
   "Supabase",
   "Docker",
+  "Claude",
 ];
 
 interface SkillsGridProps {

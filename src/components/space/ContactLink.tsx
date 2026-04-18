@@ -27,7 +27,7 @@ export function ContactLink({ label }: ContactLinkProps) {
     <a
       href="#contact"
       onClick={handleClick}
-      className="label absolute right-6 top-6 z-30 text-corner text-(--color-accent) transition-colors hover:text-accent-bright md:right-12 md:top-10"
+      className="label absolute right-6 top-6 z-30 hidden text-corner text-(--color-accent) transition-colors hover:text-accent-bright md:inline-block md:right-12 md:top-10"
     >
       {label}
     </a>

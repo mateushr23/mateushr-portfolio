@@ -6,11 +6,19 @@ import { useEffect, useRef, useState } from "react";
 import type { Dictionary } from "@/i18n";
 
 /**
- * Left rail with GitHub + LinkedIn. Default layout is a vertical stack
- * anchored at mid-left; when `ProjectsScene` toggles the carousel view it
- * dispatches a `projects:view` CustomEvent with `{ active: true }` and the
- * rail morphs into a HORIZONTAL row anchored at the bottom (same rhythm
- * line as the SCROLL glyph on the right).
+ * Desktop-only (≥ md / 768px) left rail with GitHub + LinkedIn. Default
+ * layout is a vertical stack anchored at mid-left; when `ProjectsScene`
+ * toggles the carousel view it dispatches a `projects:view` CustomEvent
+ * with `{ active: true }` and the rail morphs into a HORIZONTAL row
+ * anchored at the bottom (same rhythm line as the SCROLL glyph on the
+ * right).
+ *
+ * Mobile split — on screens < md, `SocialRailMobile` renders a static
+ * horizontal row beside `ContactLink` in the top-right corner instead
+ * (see that file for rationale). Both components are mounted together in
+ * the page tree and toggled via `hidden md:block` / `flex md:hidden` — no
+ * hook, no hydration shift. This component wears `hidden md:block` so the
+ * phase machine below never runs on mobile.
  *
  * Animation — exit-left / enter-bottom phase machine:
  * The user-facing behaviour is "icons FLY OFF the left edge of the viewport,
@@ -161,7 +169,7 @@ export function SocialRail({ dict }: SocialRailProps) {
     };
   }, [projectsView, displayView]);
 
-  const className = "absolute left-4 md:left-12 z-30";
+  const className = "absolute left-4 md:left-12 z-30 hidden md:block";
 
   const navAnchorStyle: React.CSSProperties = displayView
     ? {
